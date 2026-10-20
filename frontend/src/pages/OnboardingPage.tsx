@@ -89,14 +89,14 @@ export function OnboardingPage() {
       title="Claim your username"
       subtitle="This is what other players will see on the ladder. Free right now — 400 coins later."
     >
-      <div className="mb-5 flex items-center gap-4 rounded-xl border border-line bg-surface-2/60 p-4">
+      <div className="mb-5 flex items-center gap-4 rounded-lg bg-surface-2 p-4">
         <Avatar slug={profile?.avatar_slug} size={52} />
         <div className="min-w-0">
           <p className="truncate text-base font-bold">
             {username ? `@${username}` : '@yourname'}
           </p>
           <p className="text-xs text-muted">
-            {preview.name} profile picture · {profile?.coins ?? 0} coins · Copper
+            {preview.name} profile picture · {profile?.coins ?? 0} coins
           </p>
         </div>
       </div>

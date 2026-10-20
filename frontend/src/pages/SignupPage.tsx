@@ -204,7 +204,7 @@ export function SignupPage() {
         />
 
         {error ? (
-          <p className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-200">
+          <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-200">
             {error}
           </p>
         ) : null}
@@ -220,7 +220,7 @@ export function SignupPage() {
       </p>
 
       {mode === 'dev' ? (
-        <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+        <p className="mt-4 rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
           Demo mode: emails are not verified yet. Add your Supabase URL and publishable key to{' '}
           <code className="text-ink">backend/.env</code>, restart the API, then refresh this page to require real,
           confirmed emails and enable Google sign-in.

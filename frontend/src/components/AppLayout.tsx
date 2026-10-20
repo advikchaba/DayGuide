@@ -2,15 +2,15 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthContext'
 import { useTheme } from '../state/ThemeContext'
-import { Avatar, Button, CoinPill, RankBadge } from './ui'
+import { Avatar, Button, CoinPill } from './ui'
 import { Logo } from './Logo'
 
 const LINKS = [
-  { to: '/app', label: 'Routine', icon: '✅' },
-  { to: '/ranked', label: 'Ranked', icon: '⚔️' },
-  { to: '/shop', label: 'Shop', icon: '🛍️' },
-  { to: '/leaderboard', label: 'Ladder', icon: '🏆' },
-  { to: '/profile', label: 'Profile', icon: '👤' },
+  { to: '/app', label: 'Routine' },
+  { to: '/ranked', label: 'Ranked' },
+  { to: '/shop', label: 'Shop' },
+  { to: '/leaderboard', label: 'Ladder' },
+  { to: '/profile', label: 'Profile' },
 ]
 
 export function AppLayout() {
@@ -33,7 +33,7 @@ export function AppLayout() {
   return (
     <div className="app-shell">
       <div className="app-content">
-        <header className="sticky top-0 z-40 border-b border-line bg-bg/70 backdrop-blur-xl">
+        <header className="sticky top-0 z-40 bg-bg">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
             <Logo />
 
@@ -44,14 +44,11 @@ export function AppLayout() {
                   to={link.to}
                   className={({ isActive }) =>
                     [
-                      'focus-ring rounded-xl px-3 py-2 text-sm font-semibold transition',
-                      isActive ? 'bg-surface-2 text-ink' : 'text-muted hover:bg-surface-2/60 hover:text-ink',
+                      'focus-ring rounded-lg px-3 py-2 text-sm font-bold transition',
+                      isActive ? 'bg-surface-2 text-ink' : 'text-muted hover:bg-surface-2 hover:text-ink',
                     ].join(' ')
                   }
                 >
-                  <span className="mr-1.5" aria-hidden>
-                    {link.icon}
-                  </span>
                   {link.label}
                 </NavLink>
               ))}
@@ -61,8 +58,8 @@ export function AppLayout() {
               {profile ? (
                 <>
                   <CoinPill coins={profile.coins} className="hidden sm:inline-flex" />
-                  <RankBadge rank={profile.rank} elo={profile.elo} size="sm" />
-                  <Link to="/profile" className="focus-ring rounded-full">
+                  <span className="hidden text-xs font-bold text-muted sm:inline">{profile.elo} ELO</span>
+                  <Link to="/profile" className="focus-ring rounded-lg">
                     <Avatar slug={profile.avatar_slug} size={38} />
                   </Link>
                   <Button variant="ghost" size="sm" onClick={handleSignOut} loading={busy} className="hidden md:inline-flex">
@@ -92,14 +89,11 @@ export function AppLayout() {
                 to={link.to}
                 className={({ isActive }) =>
                   [
-                    'whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-semibold transition',
+                    'whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition',
                     isActive ? 'bg-surface-2 text-ink' : 'text-muted',
                   ].join(' ')
                 }
               >
-                <span className="mr-1" aria-hidden>
-                  {link.icon}
-                </span>
                 {link.label}
               </NavLink>
             ))}

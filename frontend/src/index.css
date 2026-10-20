@@ -2,21 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Default palette = "Midnight" dark theme. ThemeProvider overwrites these
-   variables at runtime, so components only ever reference var(--...). */
+/* Default palette = dark theme. ThemeProvider overwrites these variables at
+   runtime, so components only ever reference var(--...). */
 :root {
-  --bg: #06060b;
-  --bg-soft: #0c0c16;
-  --surface: rgba(20, 20, 33, 0.72);
-  --surface-2: rgba(31, 31, 50, 0.72);
-  --surface-solid: #141421;
-  --border: rgba(255, 255, 255, 0.1);
+  --bg: #101011;
+  --bg-soft: #17171a;
+  --surface: #1a1a1d;
+  --surface-2: #242427;
+  --surface-solid: #1d1d20;
+  --border: transparent;
   --text: #ffffff;
-  --muted: #a0a3bd;
-  --accent: #7c5cff;
-  --accent-2: #22d3ee;
-  --accent-ink: #0a0a12;
-  --glow: rgba(124, 92, 255, 0.45);
+  --muted: #a3a3a3;
+  --accent: #dcdcdc;
+  --accent-2: #d3d3d3;
+  --accent-ink: #111111;
+  --accent-soft: rgba(220, 220, 220, 0.1);
+  --glow: transparent;
   color-scheme: dark;
 }
 
@@ -30,8 +31,23 @@
   body {
     background-color: var(--bg);
     color: var(--text);
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Lato', 'Segoe UI', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2 {
+    font-family: 'Abril Fatface', Georgia, serif;
+    font-weight: 400 !important;
+    letter-spacing: -0.015em;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Lato', 'Segoe UI', system-ui, sans-serif;
   }
 
   ::selection {
@@ -47,10 +63,8 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--accent) 45%, transparent);
+    background: var(--muted);
     border-radius: 999px;
-    border: 2px solid transparent;
-    background-clip: content-box;
   }
 
   input,
@@ -63,12 +77,20 @@
 
   input::placeholder,
   textarea::placeholder {
-    color: color-mix(in srgb, var(--muted) 85%, transparent);
+    color: var(--muted);
+    opacity: 0.8;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus {
+    outline: none;
   }
 }
 
 @layer components {
-  /* Ambient page background: gradient + optional theme artwork */
+  /* Solid page background with an optional, flat-toned theme image. */
   .app-shell {
     position: relative;
     min-height: 100vh;
@@ -82,12 +104,10 @@
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: var(--hero-image, none),
-      radial-gradient(900px 520px at 12% -10%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 70%),
-      radial-gradient(760px 460px at 92% 6%, color-mix(in srgb, var(--accent-2) 26%, transparent), transparent 70%);
-    background-size: cover, auto, auto;
-    background-position: center, center, center;
-    opacity: var(--hero-image-opacity, 1);
+    background-image: var(--hero-image, none);
+    background-size: cover;
+    background-position: center;
+    opacity: 0.22;
   }
 
   .app-shell::after {
@@ -96,7 +116,8 @@
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, var(--bg) 78%);
+    background: var(--bg);
+    opacity: 0.76;
   }
 
   .app-content {
@@ -106,44 +127,31 @@
 
   .glass {
     background: var(--surface);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(18px);
-    border-radius: 1.25rem;
-    box-shadow: 0 20px 45px -30px rgba(0, 0, 0, 0.9);
+    border-radius: 1rem;
   }
 
   .glass-2 {
     background: var(--surface-2);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(14px);
+    border-radius: 0.75rem;
+  }
+
+  .glass-solid {
+    background: var(--surface-solid);
     border-radius: 1rem;
   }
 
-  /* Opaque variant for elements that animate: an opacity/transform animation
-     forces the browser to composite the backdrop filter into its own layer,
-     which makes translucent panels flicker or wash out on some GPUs. */
-  .glass-solid {
-    background: var(--surface-solid);
-    border: 1px solid var(--border);
-    border-radius: 1.25rem;
-    box-shadow: 0 20px 45px -30px rgba(0, 0, 0, 0.9);
-  }
-
-  .gradient-text {
-    background: linear-gradient(100deg, var(--text) 8%, var(--accent) 45%, var(--accent-2) 88%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
   .accent-button {
-    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    background: var(--accent);
     color: var(--accent-ink);
-    box-shadow: 0 18px 40px -18px var(--glow);
   }
 
   .focus-ring:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline: none;
+    filter: brightness(1.1);
+  }
+
+  .quiet-rule {
+    height: 1px;
+    background: var(--surface-2);
   }
 }

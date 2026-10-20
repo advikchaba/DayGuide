@@ -7,7 +7,7 @@ Prices follow the product spec:
   * light + dark themes ... free defaults
 
 ``meta`` carries everything the frontend needs to render the cosmetic
-(accent colour, emoji art, background image url, ...).
+(accent colour, initials, background image url, ...).
 """
 
 from __future__ import annotations
@@ -21,60 +21,60 @@ _THEMES: list[dict] = [
     {
         "slug": "dark",
         "name": "Midnight",
-        "description": "The classic dark interface with pure white text.",
+        "description": "The default dark interface with pure white text.",
         "rarity": "common",
         "free": True,
-        "meta": {"kind": "solid", "accent": "#7C5CFF", "accent2": "#22D3EE", "mode": "dark"},
+        "meta": {"kind": "solid", "accent": "#DCDCDC", "accent2": "#D3D3D3", "mode": "dark"},
     },
     {
         "slug": "light",
         "name": "Daylight",
-        "description": "Clean light interface for daytime planning.",
+        "description": "Clean light mode for daytime planning.",
         "rarity": "common",
         "free": True,
-        "meta": {"kind": "solid", "accent": "#5B45E0", "accent2": "#0EA5E9", "mode": "light"},
+        "meta": {"kind": "solid", "accent": "#FFFFFF", "accent2": "#808080", "mode": "light"},
     },
     {
         "slug": "blue",
         "name": "Electric Blue",
-        "description": "Cobalt accents on a deep night sky.",
+        "description": "Deep blue with a pale blue counterpoint.",
         "rarity": "rare",
-        "meta": {"kind": "solid", "accent": "#3B82F6", "accent2": "#06B6D4", "mode": "dark"},
+        "meta": {"kind": "solid", "accent": "#1D4ED8", "accent2": "#93C5FD", "mode": "dark"},
     },
     {
         "slug": "red",
         "name": "Crimson",
         "description": "For people who attack their checklist.",
         "rarity": "rare",
-        "meta": {"kind": "solid", "accent": "#EF4444", "accent2": "#F97316", "mode": "dark"},
+        "meta": {"kind": "solid", "accent": "#B91C1C", "accent2": "#FCA5A5", "mode": "dark"},
     },
     {
         "slug": "green",
         "name": "Emerald",
         "description": "Fresh, focused and a little bit smug.",
         "rarity": "rare",
-        "meta": {"kind": "solid", "accent": "#22C55E", "accent2": "#84CC16", "mode": "dark"},
+        "meta": {"kind": "solid", "accent": "#15803D", "accent2": "#86EFAC", "mode": "dark"},
     },
     {
         "slug": "pink",
         "name": "Bubblegum",
-        "description": "Neon pink energy for the aesthetic grinders.",
+        "description": "Deep rose with a soft pink counterpoint.",
         "rarity": "rare",
-        "meta": {"kind": "solid", "accent": "#EC4899", "accent2": "#A855F7", "mode": "dark"},
+        "meta": {"kind": "solid", "accent": "#BE185D", "accent2": "#F9A8D4", "mode": "dark"},
     },
     {
         "slug": "yellow",
         "name": "Solar Flare",
-        "description": "Blindingly bright, impossible to ignore.",
+        "description": "Warm ochre with a pale gold counterpoint.",
         "rarity": "rare",
-        "meta": {"kind": "solid", "accent": "#FACC15", "accent2": "#FB923C", "mode": "dark"},
+        "meta": {"kind": "solid", "accent": "#A16207", "accent2": "#FDE68A", "mode": "dark"},
     },
     {
         "slug": "purple",
         "name": "Ultraviolet",
-        "description": "Deep violet gradients and glow.",
+        "description": "Deep violet with a pale lavender counterpoint.",
         "rarity": "rare",
-        "meta": {"kind": "solid", "accent": "#A855F7", "accent2": "#6366F1", "mode": "dark"},
+        "meta": {"kind": "solid", "accent": "#6D28D9", "accent2": "#C4B5FD", "mode": "dark"},
     },
     {
         "slug": "meme-doge",
@@ -84,10 +84,9 @@ _THEMES: list[dict] = [
         "price": BASE_PRICE_IMAGE_THEME,
         "meta": {
             "kind": "image",
-            "accent": "#F59E0B",
-            "accent2": "#FDE68A",
+            "accent": "#B45309",
+            "accent2": "#FCD34D",
             "mode": "dark",
-            "emoji": "🐕",
             "image": "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=1600&q=70",
         },
     },
@@ -99,10 +98,9 @@ _THEMES: list[dict] = [
         "price": BASE_PRICE_IMAGE_THEME,
         "meta": {
             "kind": "image",
-            "accent": "#F97316",
-            "accent2": "#EF4444",
+            "accent": "#C2410C",
+            "accent2": "#FDBA74",
             "mode": "dark",
-            "emoji": "🔥",
             "image": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=70",
         },
     },
@@ -114,10 +112,9 @@ _THEMES: list[dict] = [
         "price": BASE_PRICE_IMAGE_THEME,
         "meta": {
             "kind": "image",
-            "accent": "#F472B6",
-            "accent2": "#C084FC",
+            "accent": "#BE185D",
+            "accent2": "#F9A8D4",
             "mode": "dark",
-            "emoji": "😼",
             "image": "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=1600&q=70",
         },
     },
@@ -129,10 +126,9 @@ _THEMES: list[dict] = [
         "price": BASE_PRICE_IMAGE_THEME,
         "meta": {
             "kind": "image",
-            "accent": "#4ADE80",
-            "accent2": "#22D3EE",
+            "accent": "#15803D",
+            "accent2": "#86EFAC",
             "mode": "dark",
-            "emoji": "🐸",
             "image": "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=1600&q=70",
         },
     },
@@ -144,10 +140,9 @@ _THEMES: list[dict] = [
         "price": BASE_PRICE_IMAGE_THEME,
         "meta": {
             "kind": "image",
-            "accent": "#F43F5E",
-            "accent2": "#FACC15",
+            "accent": "#B91C1C",
+            "accent2": "#FCA5A5",
             "mode": "dark",
-            "emoji": "🤡",
             "image": "https://images.unsplash.com/photo-1527261834078-9b37d35a4a32?auto=format&fit=crop&w=1600&q=70",
         },
     },
@@ -155,24 +150,24 @@ _THEMES: list[dict] = [
 
 # --- avatars ---------------------------------------------------------------- #
 _AVATARS: list[dict] = [
-    ("spark", "Spark", "✨", "#7C5CFF", True),
-    ("flame", "Flame", "🔥", "#F97316", False),
-    ("bolt", "Bolt", "⚡", "#FACC15", False),
-    ("waves", "Waves", "🌊", "#38BDF8", False),
-    ("leaf", "Leaf", "🌿", "#22C55E", False),
-    ("moon", "Moon", "🌙", "#A78BFA", False),
-    ("sun", "Sun", "🌞", "#FB923C", False),
-    ("cat", "Cat", "🐱", "#F472B6", False),
-    ("dog", "Dog", "🐶", "#F59E0B", False),
-    ("frog", "Frog", "🐸", "#4ADE80", False),
-    ("ghost", "Ghost", "👻", "#E2E8F0", False),
-    ("robot", "Robot", "🤖", "#94A3B8", False),
-    ("alien", "Alien", "👽", "#34D399", False),
-    ("dragon", "Dragon", "🐲", "#EF4444", False),
-    ("crown", "Crown", "👑", "#F5C542", False),
-    ("skull", "Skull", "💀", "#CBD5E1", False),
-    ("cherry", "Cherry", "🍒", "#F43F5E", False),
-    ("rocket", "Rocket", "🚀", "#60A5FA", False),
+    ("spark", "Spark", "SP", "#7C5CFF", True),
+    ("flame", "Flame", "FL", "#F97316", False),
+    ("bolt", "Bolt", "BO", "#FACC15", False),
+    ("waves", "Waves", "WV", "#38BDF8", False),
+    ("leaf", "Leaf", "LF", "#22C55E", False),
+    ("moon", "Moon", "MN", "#A78BFA", False),
+    ("sun", "Sun", "SN", "#FB923C", False),
+    ("cat", "Cat", "CT", "#F472B6", False),
+    ("dog", "Dog", "DG", "#F59E0B", False),
+    ("frog", "Frog", "FR", "#4ADE80", False),
+    ("ghost", "Ghost", "GH", "#E2E8F0", False),
+    ("robot", "Robot", "RB", "#94A3B8", False),
+    ("alien", "Alien", "AL", "#34D399", False),
+    ("dragon", "Dragon", "DR", "#EF4444", False),
+    ("crown", "Crown", "CR", "#F5C542", False),
+    ("skull", "Skull", "SK", "#CBD5E1", False),
+    ("cherry", "Cherry", "CH", "#F43F5E", False),
+    ("rocket", "Rocket", "RK", "#60A5FA", False),
 ]
 
 
@@ -195,7 +190,7 @@ def build_catalog() -> list[dict]:
             }
         )
 
-    for order, (slug, name, emoji, accent, free) in enumerate(_AVATARS):
+    for order, (slug, name, initials, accent, free) in enumerate(_AVATARS):
         items.append(
             {
                 "slug": slug,
@@ -206,7 +201,7 @@ def build_catalog() -> list[dict]:
                 "rarity": "common" if free else "rare",
                 "is_free": free,
                 "sort_order": order,
-                "meta": {"emoji": emoji, "accent": accent},
+                "meta": {"initials": initials, "accent": accent},
             }
         )
 

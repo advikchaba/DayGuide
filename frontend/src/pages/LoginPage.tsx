@@ -58,7 +58,7 @@ export function LoginPage() {
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to keep your streak alive and defend your rank."
+      subtitle="Sign in to keep your streak alive and defend your spot."
       footer={
         <>
           New here?{' '}
@@ -102,7 +102,7 @@ export function LoginPage() {
         />
 
         {error ? (
-          <p className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-200">
+          <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-200">
             {error}
           </p>
         ) : null}
@@ -113,7 +113,7 @@ export function LoginPage() {
       </form>
 
       {mode === 'dev' ? (
-        <p className="mt-4 rounded-xl border border-line bg-surface-2/60 px-3 py-2 text-[11px] leading-relaxed text-muted">
+        <p className="mt-4 rounded-lg bg-surface-2 px-3 py-2 text-[11px] leading-relaxed text-muted">
           No Supabase credentials were found, so the local dev auth provider is active. Add
           <code className="text-ink">SUPABASE_URL</code> and
           <code className="text-ink">SUPABASE_PUBLISHABLE_KEY</code> to{' '}

@@ -13,6 +13,7 @@ export default {
         muted: 'var(--muted)',
         accent: 'var(--accent)',
         accent2: 'var(--accent-2)',
+        'accent-soft': 'var(--accent-soft)',
         'accent-ink': 'var(--accent-ink)',
       },
       borderRadius: {
@@ -24,7 +25,8 @@ export default {
         card: '0 20px 45px -30px rgba(0,0,0,0.9)',
       },
       fontFamily: {
-        sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
+        sans: ['Lato', 'Segoe UI', 'system-ui', 'sans-serif'],
+        display: ['Abril Fatface', 'Georgia', 'serif'],
       },
       keyframes: {
         'fade-up': {

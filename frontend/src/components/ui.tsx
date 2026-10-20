@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import { useEffect } from 'react'
 import { getAvatar } from '../lib/themes'
-import type { RankInfo } from '../lib/types'
+import { RANK_TIERS, type RankInfo } from '../lib/types'
 
 /* -------------------------------------------------------------------------- */
 /* Buttons                                                                    */
@@ -19,11 +19,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'accent-button hover:brightness-110 active:scale-[0.98]',
-  secondary:
-    'border border-line bg-surface-2 text-ink hover:border-accent/60 hover:bg-surface-2/80 active:scale-[0.98]',
-  ghost: 'text-muted hover:text-ink hover:bg-surface-2/60 active:scale-[0.98]',
-  danger: 'border border-rose-400/40 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25 active:scale-[0.98]',
-  coin: 'border border-amber-300/40 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25 active:scale-[0.98]',
+  secondary: 'bg-surface-2 text-ink hover:brightness-110 active:scale-[0.98]',
+  ghost: 'text-muted hover:text-ink hover:bg-surface-2 active:scale-[0.98]',
+  danger: 'bg-rose-500/15 text-rose-200 hover:bg-rose-500/25 active:scale-[0.98]',
+  coin: 'bg-amber-400/15 text-amber-200 hover:bg-amber-400/25 active:scale-[0.98]',
 }
 
 const SIZES: Record<ButtonSize, string> = {
@@ -48,7 +47,7 @@ export function Button({
       {...rest}
       disabled={disabled || loading}
       className={[
-        'focus-ring inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition duration-150 disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-ring inline-flex items-center justify-center gap-2 rounded-lg font-bold transition duration-150 disabled:cursor-not-allowed disabled:opacity-50',
         VARIANTS[variant],
         SIZES[size],
         full ? 'w-full' : '',
@@ -83,16 +82,16 @@ interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
 export function Field({ label, hint, error, trailing, className = '', ...rest }: FieldProps) {
   return (
     <label className="block">
-      <span className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted">
+      <span className="mb-1.5 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted">
         {label}
-        {hint ? <span className="font-medium normal-case tracking-normal text-muted/80">{hint}</span> : null}
+        {hint ? <span className="font-medium normal-case tracking-normal text-muted">{hint}</span> : null}
       </span>
       <span className="relative block">
         <input
           {...rest}
           className={[
-            'focus-ring w-full rounded-xl border bg-surface-2/70 px-4 py-3 text-sm text-ink transition placeholder:text-muted/70',
-            error ? 'border-rose-400/70' : 'border-line focus:border-accent/70',
+            'focus-ring w-full rounded-lg bg-surface-2 px-4 py-3 text-sm text-ink transition placeholder:text-muted',
+            error ? 'bg-rose-500/10' : '',
             trailing ? 'pr-12' : '',
             className,
           ].join(' ')}
@@ -123,7 +122,7 @@ export function SectionTitle({ title, subtitle, action }: { title: string; subti
   return (
     <div className="mb-4 flex items-end justify-between gap-4">
       <div>
-        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <h2 className="text-2xl tracking-tight">{title}</h2>
         {subtitle ? <p className="text-sm text-muted">{subtitle}</p> : null}
       </div>
       {action}
@@ -141,15 +140,15 @@ export function Badge({
   className?: string
 }) {
   const tones = {
-    neutral: 'border-line bg-surface-2 text-muted',
-    accent: 'border-accent/40 bg-accent/15 text-ink',
-    gold: 'border-amber-300/40 bg-amber-400/15 text-amber-100',
-    success: 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100',
-    danger: 'border-rose-400/40 bg-rose-500/15 text-rose-100',
+    neutral: 'bg-surface-2 text-muted',
+    accent: 'bg-accent-soft text-ink',
+    gold: 'bg-amber-400/15 text-amber-200',
+    success: 'bg-emerald-500/15 text-emerald-200',
+    danger: 'bg-rose-500/15 text-rose-200',
   }
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${tones[tone]} ${className}`}
+      className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-bold ${tones[tone]} ${className}`}
     >
       {children}
     </span>
@@ -169,12 +168,12 @@ export function ProgressBar({
 }) {
   const clamped = Math.max(0, Math.min(100, value))
   return (
-    <div className={`h-2.5 w-full overflow-hidden rounded-full bg-surface-2/80 ${className}`}>
+    <div className={`h-2 w-full overflow-hidden rounded-full bg-surface-2 ${className}`}>
       <div
         className="h-full rounded-full transition-all duration-500"
         style={{
           width: `${clamped}%`,
-          background: color ?? 'linear-gradient(90deg, var(--accent), var(--accent-2))',
+          background: color ?? 'var(--accent)',
         }}
       />
       {showLabel ? null : null}
@@ -185,24 +184,67 @@ export function ProgressBar({
 /* -------------------------------------------------------------------------- */
 /* Identity chips                                                             */
 /* -------------------------------------------------------------------------- */
-export function Avatar({ slug, size = 40, ring }: { slug: string | null | undefined; size?: number; ring?: string }) {
+export function Avatar({ slug, size = 40 }: { slug: string | null | undefined; size?: number }) {
   const avatar = getAvatar(slug)
   return (
     <span
-      className="inline-flex items-center justify-center rounded-full border text-center"
+      className="inline-flex shrink-0 items-center justify-center rounded-lg text-center font-black"
       style={{
         width: size,
         height: size,
-        fontSize: size * 0.5,
-        background: `radial-gradient(circle at 30% 25%, ${avatar.accent}55, transparent 65%)`,
-        borderColor: ring ?? `${avatar.accent}88`,
-        boxShadow: `0 0 24px -8px ${avatar.accent}`,
+        fontSize: size * 0.34,
+        background: `color-mix(in srgb, ${avatar.accent} 22%, var(--surface-2))`,
+        color: avatar.accent,
       }}
       title={avatar.name}
     >
-      {avatar.emoji}
+      {avatar.initials}
     </span>
   )
+}
+
+export function rankTier(name: string | null | undefined): RankInfo | undefined {
+  return RANK_TIERS.find((tier) => tier.name === name)
+}
+
+/**
+ * Rank logos are plain geometric marks. They live on the ladder page only.
+ */
+export function RankMark({ name, size = 16 }: { name: string; size?: number }) {
+  const tier = rankTier(name)
+  const color = tier?.color ?? '#b87333'
+  const box = { width: size, height: size, flexShrink: 0, display: 'inline-block' } as const
+
+  switch (name) {
+    case 'Copper':
+      return <span style={{ ...box, background: color, borderRadius: 2 }} aria-hidden />
+    case 'Bronze':
+      return <span style={{ ...box, width: size * 1.45, height: size * 0.8, background: color, borderRadius: 2 }} aria-hidden />
+    case 'Silver':
+      return <span style={{ ...box, background: color, clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} aria-hidden />
+    case 'Gold':
+      return <span style={{ ...box, background: color, transform: 'rotate(45deg)', borderRadius: 1 }} aria-hidden />
+    case 'Platinum':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flexShrink: 0 }}>
+          <path fill={color} d="M2.5 18.5h19L19.4 7l-5.1 3.8L12 3.8 9.7 10.8 4.6 7z" />
+          <path fill={color} d="M3.4 20h17.2v1.6H3.4z" />
+        </svg>
+      )
+    case 'Ruby':
+      return (
+        <span
+          style={{
+            ...box,
+            background: color,
+            clipPath: 'polygon(50% 0, 100% 36%, 50% 100%, 0 36%)',
+          }}
+          aria-hidden
+        />
+      )
+    default:
+      return <span style={{ ...box, background: color, borderRadius: 2 }} aria-hidden />
+  }
 }
 
 export function RankBadge({
@@ -210,36 +252,31 @@ export function RankBadge({
   elo,
   size = 'md',
 }: {
-  rank: RankInfo | { name: string; color: string }
+  rank: RankInfo | { name: string; color?: string }
   elo?: number
   size?: 'sm' | 'md'
 }) {
+  const tier = rankTier(rank.name)
+  const color = tier?.color ?? ('color' in rank && rank.color ? rank.color : 'var(--text)')
   return (
     <span
       className={[
-        'inline-flex items-center gap-2 rounded-full border font-bold uppercase tracking-wide',
-        size === 'sm' ? 'px-2.5 py-1 text-[10px]' : 'px-3 py-1.5 text-xs',
+        'inline-flex items-center gap-2 font-bold uppercase tracking-wide',
+        size === 'sm' ? 'text-[10px]' : 'text-xs',
       ].join(' ')}
-      style={{
-        borderColor: `${rank.color}66`,
-        background: `${rank.color}22`,
-        color: rank.color,
-      }}
+      style={{ color }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: rank.color }} />
+      <RankMark name={rank.name} size={size === 'sm' ? 12 : 15} />
       {rank.name}
-      {typeof elo === 'number' ? <span className="font-mono text-[11px] opacity-80">{elo} ELO</span> : null}
+      {typeof elo === 'number' ? <span className="font-mono text-[11px] font-semibold opacity-75">{elo} ELO</span> : null}
     </span>
   )
 }
 
 export function CoinPill({ coins, className = '' }: { coins: number; className?: string }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/15 px-3 py-1.5 text-sm font-bold text-amber-100 ${className}`}
-    >
-      <span aria-hidden>🪙</span>
-      {coins.toLocaleString()}
+    <span className={`inline-flex items-center rounded-md bg-surface-2 px-3 py-1.5 text-sm font-bold text-ink ${className}`}>
+      {coins.toLocaleString()} coins
     </span>
   )
 }
@@ -247,7 +284,7 @@ export function CoinPill({ coins, className = '' }: { coins: number; className?:
 export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
     <div className="glass-2 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-muted">{label}</p>
       <p className="mt-1 text-lg font-bold">{value}</p>
       {hint ? <p className="text-xs text-muted">{hint}</p> : null}
     </div>
@@ -285,22 +322,19 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-black/75" onClick={onClose} aria-hidden />
       <div className={`glass-solid relative z-10 w-full ${width} animate-pop p-6`}>
         {title ? <h3 className="mb-3 text-lg font-bold">{title}</h3> : null}
-        <div className="text-sm text-ink/90">{children}</div>
+        <div className="text-sm text-ink">{children}</div>
         {footer ? <div className="mt-5 flex justify-end gap-2">{footer}</div> : null}
       </div>
     </div>
   )
 }
 
-export function EmptyState({ icon, title, body, action }: { icon: string; title: string; body: string; action?: ReactNode }) {
+export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
     <div className="glass flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <span className="text-4xl" aria-hidden>
-        {icon}
-      </span>
       <h3 className="text-lg font-bold">{title}</h3>
       <p className="max-w-md text-sm text-muted">{body}</p>
       {action}

@@ -1,4 +1,4 @@
-import { Modal, ProgressBar } from './ui'
+import { Modal } from './ui'
 import type { Reward } from '../lib/types'
 
 /**
@@ -23,11 +23,9 @@ export function RewardBurst({
   return (
     <Modal open={open} onClose={onClose} width="max-w-md">
       <div className="text-center">
-        <div className={`mx-auto mb-3 text-5xl ${isPerfect ? 'animate-float' : ''}`} aria-hidden>
-          {isNegative ? '↩️' : isPerfect ? '🎉' : '🪙'}
-        </div>
-        <h3 className="text-xl font-extrabold">
-          {isNegative ? 'Rewards reverted' : isPerfect ? 'Routine complete!' : title}
+        <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-muted">Reward</p>
+        <h3 className="mt-2 text-2xl">
+          {isNegative ? 'Rewards reverted' : isPerfect ? 'Routine complete' : title}
         </h3>
         <p className="mt-1 text-sm text-muted">
           {isPerfect
@@ -40,22 +38,18 @@ export function RewardBurst({
         <div className="my-5 flex items-center justify-center gap-3">
           <span
             className={[
-              'rounded-2xl border px-5 py-3 text-2xl font-black',
-              reward.coins >= 0
-                ? 'border-amber-300/40 bg-amber-400/15 text-amber-100'
-                : 'border-rose-400/40 bg-rose-500/15 text-rose-100',
+              'rounded-lg px-5 py-3 text-2xl font-bold',
+              reward.coins >= 0 ? 'bg-amber-400/15 text-amber-200' : 'bg-rose-500/15 text-rose-200',
             ].join(' ')}
           >
             {reward.coins >= 0 ? '+' : ''}
-            {reward.coins.toLocaleString()} 🪙
+            {reward.coins.toLocaleString()} coins
           </span>
           {reward.elo !== 0 ? (
             <span
               className={[
-                'rounded-2xl border px-5 py-3 text-2xl font-black',
-                reward.elo > 0
-                  ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
-                  : 'border-rose-400/40 bg-rose-500/15 text-rose-100',
+                'rounded-lg px-5 py-3 text-2xl font-bold',
+                reward.elo > 0 ? 'bg-emerald-500/15 text-emerald-200' : 'bg-rose-500/15 text-rose-200',
               ].join(' ')}
             >
               {reward.elo > 0 ? '+' : ''}
@@ -73,20 +67,23 @@ export function RewardBurst({
         ) : null}
 
         <div className="glass-2 mb-5 px-4 py-3 text-left">
-          <div className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted">
-            <span>{reward.rank_name}</span>
-            <span>{reward.new_elo} ELO</span>
+          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted">
+            <span>New balance</span>
+            <span>{reward.new_balance.toLocaleString()} coins</span>
           </div>
-          <ProgressBar value={reward.rank_progress * 100} />
+          <div className="mt-1.5 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted">
+            <span>New ELO</span>
+            <span>{reward.new_elo}</span>
+          </div>
           <p className="mt-2 text-xs text-muted">
-            {reward.streak > 0 ? `🔥 ${reward.streak} day perfect streak` : 'Complete a routine perfectly to start a streak'}
+            {reward.streak > 0 ? `${reward.streak} day perfect streak` : 'Complete a routine perfectly to start a streak'}
           </p>
         </div>
 
         <button
           type="button"
           onClick={onClose}
-          className="focus-ring accent-button w-full rounded-xl px-4 py-3 text-sm font-bold"
+          className="focus-ring accent-button w-full rounded-lg px-4 py-3 text-sm font-bold"
         >
           Keep going
         </button>

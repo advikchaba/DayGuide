@@ -150,7 +150,7 @@ def main() -> None:
             headers=auth(token),
             json={
                 "name": "Ranked Sprint",
-                "emoji": "🏁",
+                "emoji": "",
                 "tasks": [
                     {"title": "20 push ups", "requires_proof": True},
                     {"title": "Read 10 pages", "requires_proof": True},

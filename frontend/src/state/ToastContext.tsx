@@ -47,11 +47,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onClick={() => dismiss(toast.id)}
             style={toast.tone === 'info' ? { background: 'var(--surface-solid)' } : undefined}
             className={[
-              'pointer-events-auto animate-fade-up rounded-2xl border px-4 py-3 text-left text-sm font-medium shadow-card transition',
-              toast.tone === 'success' ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100' : '',
-              toast.tone === 'error' ? 'border-rose-400/40 bg-rose-500/15 text-rose-100' : '',
-              toast.tone === 'info' ? 'border-line text-ink' : '',
-              toast.tone === 'coins' ? 'border-amber-300/50 bg-amber-400/15 text-amber-100' : '',
+              'pointer-events-auto animate-fade-up rounded-lg px-4 py-3 text-left text-sm font-medium transition',
+              toast.tone === 'success' ? 'bg-emerald-500/15 text-emerald-100' : '',
+              toast.tone === 'error' ? 'bg-rose-500/15 text-rose-100' : '',
+              toast.tone === 'info' ? 'text-ink' : '',
+              toast.tone === 'coins' ? 'bg-amber-400/15 text-amber-100' : '',
             ].join(' ')}
           >
             {toast.message}

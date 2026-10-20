@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Avatar, Badge, Button, Card, CoinPill, Field, Modal, ProgressBar, RankBadge, SectionTitle, Stat } from '../components/ui'
+import { Avatar, Badge, Button, Card, CoinPill, Field, Modal, SectionTitle, Stat } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { getTheme } from '../lib/themes'
 import type { LedgerEntry, Profile, Proof } from '../lib/types'
@@ -77,13 +77,13 @@ export function ProfilePage() {
           <div className="flex flex-wrap items-center gap-4">
             <Avatar slug={profile.avatar_slug} size={72} />
             <div className="min-w-0">
-              <h2 className="text-2xl font-black tracking-tight">
+              <h2 className="text-3xl tracking-tight">
                 {profile.username ? `@${profile.username}` : 'No username yet'}
               </h2>
               <p className="text-sm text-muted">{profile.email}</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <RankBadge rank={profile.rank} elo={profile.elo} />
                 <Badge tone="accent">{theme.name} theme</Badge>
+                <Badge tone="neutral">{profile.elo} ELO</Badge>
               </div>
             </div>
             <div className="ml-auto">
@@ -91,22 +91,19 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-muted">
-              <span>
-                {profile.rank.name} · {profile.rank.min_elo}–{profile.rank.max_elo} ELO
-              </span>
-              <span>{profile.rank.elo_to_next > 0 ? `${profile.rank.elo_to_next} to next tier` : 'Max tier'}</span>
-            </div>
-            <ProgressBar value={profile.rank.progress * 100} color={profile.rank.color} />
-          </div>
+          <p className="text-sm text-muted">
+            Your rank, tier and position are shown on the ladder page. This page is for your identity and history.
+          </p>
 
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => setUsernameModal(true)}>
-              {isFirstUsername ? 'Claim username (free)' : `Change username · 400 🪙`}
+              {isFirstUsername ? 'Claim username (free)' : 'Change username · 400 coins'}
             </Button>
             <Link to="/shop">
               <Button variant="secondary">Change look</Button>
+            </Link>
+            <Link to="/leaderboard">
+              <Button variant="ghost">View ladder</Button>
             </Link>
             {profile.theme_slug !== 'dark' ? (
               <Button
@@ -128,9 +125,9 @@ export function ProfilePage() {
         </Card>
 
         <Card>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted">Career stats</h3>
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-muted">Career stats</h3>
           <div className="grid grid-cols-2 gap-3">
-            <Stat label="ELO" value={profile.elo} hint={profile.rank.name} />
+            <Stat label="ELO" value={profile.elo} />
             <Stat label="Coins" value={profile.coins.toLocaleString()} />
             <Stat label="Perfect routines" value={profile.routines_completed} />
             <Stat label="Tasks done" value={profile.tasks_completed} />
@@ -151,7 +148,7 @@ export function ProfilePage() {
                   {entry.delta !== 0 ? (
                     <span className={entry.delta > 0 ? 'text-emerald-300' : 'text-rose-300'}>
                       {entry.delta > 0 ? '+' : ''}
-                      {entry.delta} 🪙
+                      {entry.delta} coins
                     </span>
                   ) : null}
                   {entry.elo_delta !== 0 ? (
@@ -171,9 +168,9 @@ export function ProfilePage() {
           <SectionTitle title="Your photo proofs" subtitle="Verification results for the things you claimed." />
           <div className="grid grid-cols-3 gap-2">
             {proofs.map((proof) => (
-              <figure key={proof.id} className="overflow-hidden rounded-xl border border-line">
+              <figure key={proof.id} className="overflow-hidden rounded-lg">
                 <img src={proof.image_url} alt={proof.claimed} className="h-24 w-full object-cover" loading="lazy" />
-                <figcaption className="flex items-center justify-between gap-1 bg-surface-2 px-2 py-1.5 text-[10px] font-semibold">
+                <figcaption className="flex items-center justify-between gap-1 bg-surface-2 px-2 py-1.5 text-[10px] font-bold">
                   <span
                     className={
                       proof.status === 'approved'
@@ -185,7 +182,7 @@ export function ProfilePage() {
                   >
                     {proof.status}
                   </span>
-                  <span className="text-muted">+{proof.coins_awarded}🪙</span>
+                  <span className="text-muted">+{proof.coins_awarded} coins</span>
                 </figcaption>
               </figure>
             ))}
@@ -198,7 +195,11 @@ export function ProfilePage() {
         </Card>
       </div>
 
-      <Modal open={usernameModal} onClose={() => setUsernameModal(false)} title={isFirstUsername ? 'Claim your username' : 'Change username'}>
+      <Modal
+        open={usernameModal}
+        onClose={() => setUsernameModal(false)}
+        title={isFirstUsername ? 'Claim your username' : 'Change username'}
+      >
         <form onSubmit={handleUsernameChange} className="space-y-4">
           <p className="text-sm text-muted">
             {isFirstUsername
@@ -218,7 +219,7 @@ export function ProfilePage() {
               Cancel
             </Button>
             <Button type="submit" loading={savingName} disabled={!newUsername.trim()}>
-              {isFirstUsername ? 'Claim it' : 'Pay 400 🪙 and change'}
+              {isFirstUsername ? 'Claim it' : 'Pay 400 coins and change'}
             </Button>
           </div>
         </form>

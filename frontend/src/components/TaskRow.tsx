@@ -35,10 +35,8 @@ export function TaskRow({ task, busy, onToggle, onProof }: TaskRowProps) {
   return (
     <li
       className={[
-        'group flex items-start gap-3 rounded-2xl border p-3.5 transition',
-        task.completed_today
-          ? 'border-emerald-400/30 bg-emerald-500/[0.07]'
-          : 'border-line bg-surface-2/50 hover:border-accent/40',
+        'group flex items-start gap-3 rounded-lg p-3.5 transition',
+        task.completed_today ? 'bg-emerald-500/10' : 'bg-surface-2 hover:brightness-105',
       ].join(' ')}
     >
       <button
@@ -48,10 +46,10 @@ export function TaskRow({ task, busy, onToggle, onProof }: TaskRowProps) {
         aria-pressed={task.completed_today}
         aria-label={task.completed_today ? `Mark ${task.title} as not done` : `Mark ${task.title} as done`}
         className={[
-          'focus-ring mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-xl border-2 text-sm font-black transition',
+          'focus-ring mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-md text-sm font-black transition',
           task.completed_today
-            ? 'border-emerald-400 bg-emerald-400 text-emerald-950'
-            : 'border-line text-transparent hover:border-accent',
+            ? 'bg-emerald-400 text-emerald-950'
+            : 'bg-surface-solid text-transparent hover:text-muted',
           busy ? 'opacity-60' : '',
         ].join(' ')}
       >
@@ -59,15 +57,15 @@ export function TaskRow({ task, busy, onToggle, onProof }: TaskRowProps) {
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className={['text-sm font-semibold', task.completed_today ? 'line-through decoration-emerald-400/70' : ''].join(' ')}>
+        <p className={['text-sm font-bold', task.completed_today ? 'line-through decoration-emerald-400/70' : ''].join(' ')}>
           {task.title}
         </p>
 
         {task.note ? <p className="mt-0.5 text-xs text-muted">{task.note}</p> : null}
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge tone="gold">🪙 +{task.coin_value}</Badge>
-          {task.requires_proof ? <Badge tone="accent">📸 proof required</Badge> : null}
+          <Badge tone="gold">+{task.coin_value} coins</Badge>
+          {task.requires_proof ? <Badge tone="accent">Proof required</Badge> : null}
           {proofBadge ? <Badge tone={proofBadge.tone}>{proofBadge.label}</Badge> : null}
         </div>
       </div>

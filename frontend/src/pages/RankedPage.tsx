@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Avatar, Badge, Button, Card, EmptyState, Modal, ProgressBar, RankBadge, SectionTitle, Spinner } from '../components/ui'
+import { Avatar, Badge, Button, Card, EmptyState, Modal, ProgressBar, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { prepareProofPhoto } from '../lib/images'
 import type { Match, MatchTask, ProofVerification, Routine } from '../lib/types'
@@ -11,7 +11,7 @@ import { useToast } from '../state/ToastContext'
  * item, first to finish takes the ELO.
  */
 export function RankedPage() {
-  const { profile, refresh } = useAuth()
+  const { refresh } = useAuth()
   const { push } = useToast()
 
   const [match, setMatch] = useState<Match | null>(null)
@@ -64,7 +64,7 @@ export function RankedPage() {
         if (fresh.status === 'finished' && previous?.status !== 'finished') {
           setResultOpen(true)
           setResultModal({
-            title: fresh.you_won ? 'Race won! 🏆' : 'Race lost',
+            title: fresh.you_won ? 'Race won' : 'Race lost',
             body: fresh.you_won
               ? '+50 ELO and +200 coins are in your account.'
               : 'Your opponent finished first. Queue again and take the ELO back.',
@@ -139,7 +139,7 @@ export function RankedPage() {
         // The race can end on our own final upload - show the result immediately.
         if (result.match.status === 'finished') {
           setResultModal({
-            title: result.match.you_won ? 'Race won! 🏆' : 'Race lost',
+            title: result.match.you_won ? 'Race won' : 'Race lost',
             body: result.match.you_won
               ? '+50 ELO and +200 coins are in your account.'
               : 'Your opponent finished first. Queue again and take the ELO back.',
@@ -180,7 +180,6 @@ export function RankedPage() {
       <SectionTitle
         title="Ranked races"
         subtitle="Same checklist, two players, first to get every item verified wins the ELO."
-        action={<RankBadge rank={profile?.rank ?? { name: 'Copper', color: '#C87F52' }} elo={profile?.elo} />}
       />
 
       {!match ? (
@@ -194,7 +193,6 @@ export function RankedPage() {
 
             {routines.length === 0 ? (
               <EmptyState
-                icon="📋"
                 title="No routine to race with"
                 body="Build a routine first — it becomes the checklist you both have to photograph."
               />
@@ -207,13 +205,13 @@ export function RankedPage() {
                       type="button"
                       onClick={() => setSelectedRoutine(routine.id)}
                       className={[
-                        'focus-ring rounded-xl border px-3 py-2 text-sm font-semibold transition',
+                        'focus-ring rounded-lg px-3 py-2 text-sm font-bold transition',
                         routine.id === selectedRoutine
-                          ? 'border-accent/60 bg-accent/15'
-                          : 'border-line bg-surface-2/50 text-muted hover:text-ink',
+                          ? 'bg-surface-2 text-ink'
+                          : 'bg-surface text-muted hover:text-ink',
                       ].join(' ')}
                     >
-                      {routine.emoji} {routine.name}
+                      {routine.name}
                       <span className="ml-2 text-xs text-muted">{routine.total} items</span>
                     </button>
                   ))}
@@ -225,7 +223,7 @@ export function RankedPage() {
                   </Button>
                 </div>
 
-                <div className="rounded-xl border border-line bg-surface-2/50 p-3 text-xs text-muted">
+                <div className="rounded-lg bg-surface-2 p-3 text-xs text-muted">
                   Rewards: first to finish gets <span className="font-bold text-ink">+{50} ELO</span> and{' '}
                   <span className="font-bold text-ink">+200 coins</span>. Not finishing costs you 15 ELO.
                 </div>
@@ -242,14 +240,14 @@ export function RankedPage() {
                 onChange={(event) => setCode(event.target.value.toUpperCase())}
                 placeholder="ABC123"
                 maxLength={8}
-                className="focus-ring w-full rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-center text-lg font-black tracking-[0.4em]"
+                className="focus-ring w-full rounded-lg bg-surface-2 px-4 py-3 text-center text-lg font-black tracking-[0.4em]"
               />
               <Button type="submit" variant="secondary" full loading={joining} disabled={!code.trim()}>
                 Join race
               </Button>
             </form>
 
-            <div className="rounded-xl border border-line bg-surface-2/50 p-3 text-xs text-muted">
+            <div className="rounded-lg bg-surface-2 p-3 text-xs text-muted">
               Verification: {verification ? `${verification.provider}${verification.automatic ? ' (automatic)' : ''}` : 'loading…'}
             </div>
           </Card>
@@ -279,7 +277,7 @@ export function RankedPage() {
             </div>
 
             {match.status === 'waiting' ? (
-              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm">
+              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-amber-400/10 p-4 text-sm">
                 <Spinner className="h-4 w-4" />
                 <span>
                   Waiting for an opponent. Share code{' '}
@@ -294,10 +292,7 @@ export function RankedPage() {
                 {[me, opponent].filter(Boolean).map((player) => (
                   <div
                     key={player!.user_id}
-                    className={[
-                      'glass-2 p-4',
-                      player!.is_you ? 'border-accent/50' : '',
-                    ].join(' ')}
+                    className={['glass-2 p-4', player!.is_you ? 'brightness-110' : ''].join(' ')}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar slug={player!.avatar_slug} size={42} />
@@ -306,7 +301,7 @@ export function RankedPage() {
                           {player!.is_you ? 'You' : `@${player!.username ?? 'opponent'}`}
                         </p>
                         <p className="text-xs text-muted">
-                          {player!.rank_name} · {player!.elo} ELO
+                          {player!.elo} ELO
                           {player!.elo_delta ? ` (${player!.elo_delta > 0 ? '+' : ''}${player!.elo_delta})` : ''}
                         </p>
                       </div>
@@ -347,10 +342,8 @@ export function RankedPage() {
 
       <Modal open={resultOpen} onClose={() => setResultOpen(false)} width="max-w-md">
         <div className="text-center">
-          <div className="mb-3 text-5xl" aria-hidden>
-            {resultModal?.tone === 'win' ? '🏆' : '🥈'}
-          </div>
-          <h3 className="text-xl font-extrabold">{resultModal?.title ?? 'Race finished'}</h3>
+          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-muted">Result</p>
+          <h3 className="mt-2 text-2xl">{resultModal?.title ?? 'Race finished'}</h3>
           <p className="mt-2 text-sm text-muted">{resultModal?.body}</p>
           <div className="mt-5 flex flex-col gap-2">
             <Button
@@ -400,14 +393,14 @@ function RaceTaskRow({
   return (
     <li
       className={[
-        'flex flex-wrap items-center gap-3 rounded-2xl border p-3.5 transition',
-        task.approved ? 'border-emerald-400/40 bg-emerald-500/[0.08]' : 'border-line bg-surface-2/50',
+        'flex flex-wrap items-center gap-3 rounded-lg p-3.5 transition',
+        task.approved ? 'bg-emerald-500/10' : 'bg-surface-2',
       ].join(' ')}
     >
       <span
         className={[
-          'grid h-8 w-8 shrink-0 place-items-center rounded-xl border-2 text-sm font-black',
-          task.approved ? 'border-emerald-400 bg-emerald-400 text-emerald-950' : 'border-line text-muted',
+          'grid h-8 w-8 shrink-0 place-items-center rounded-md text-sm font-black',
+          task.approved ? 'bg-emerald-400 text-emerald-950' : 'bg-surface-solid text-muted',
         ].join(' ')}
       >
         {task.approved ? '✓' : '•'}
@@ -424,7 +417,7 @@ function RaceTaskRow({
       </div>
 
       {preview ? (
-        <img src={preview} alt="Your proof" className="h-12 w-12 rounded-xl border border-line object-cover" />
+        <img src={preview} alt="Your proof" className="h-12 w-12 rounded-lg object-cover" />
       ) : null}
 
       <Button

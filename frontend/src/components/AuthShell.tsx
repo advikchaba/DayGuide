@@ -23,22 +23,20 @@ export function AuthShell({
         <aside className="relative hidden flex-col justify-between overflow-hidden p-10 lg:flex">
           <Logo />
           <div className="relative z-10 max-w-md">
-            <h1 className="text-4xl font-black leading-tight tracking-tight">
-              Turn your daily routine into <span className="gradient-text">competitiveness</span>
-            </h1>
+            <h1 className="text-5xl leading-[1.05]">Turn your daily routine into competitiveness</h1>
             <p className="mt-4 text-sm text-muted">
               Tick off your checklist, earn coins for every task, unlock themes and profile pictures, then race other
-              players up the Copper → Ruby ladder.
+              players up the global ladder.
             </p>
 
-            <ul className="mt-8 space-y-3 text-sm">
+            <ul className="mt-8 space-y-4 text-sm">
               {[
-                ['🪙', '+200 coins for a perfect routine, +50 ELO'],
-                ['📸', 'Photo verification keeps the ladder honest'],
-                ['⚔️', 'Ranked races: first to finish takes the ELO'],
-              ].map(([icon, text]) => (
-                <li key={text} className="glass-2 flex items-center gap-3 px-4 py-3">
-                  <span aria-hidden>{icon}</span>
+                '+200 coins for a perfect routine, +50 ELO',
+                'Photo verification keeps the ladder honest',
+                'Ranked races: first to finish takes the ELO',
+              ].map((text, index) => (
+                <li key={text} className="flex gap-3">
+                  <span className="text-xs font-bold tracking-[0.2em] text-muted">{String(index + 1).padStart(2, '0')}</span>
                   <span className="text-muted">{text}</span>
                 </li>
               ))}
@@ -55,7 +53,7 @@ export function AuthShell({
             </div>
 
             <div className="glass-solid animate-fade-up p-6 sm:p-8">
-              <h2 className="text-2xl font-extrabold tracking-tight">{title}</h2>
+              <h2 className="text-3xl tracking-tight">{title}</h2>
               <p className="mt-1 text-sm text-muted">{subtitle}</p>
               <div className="mt-6">{children}</div>
             </div>
@@ -64,7 +62,7 @@ export function AuthShell({
 
             <p className="mt-6 text-center text-xs text-muted">
               <Link to="/" className="focus-ring rounded underline-offset-4 hover:underline">
-                ← Back to home
+                Back to home
               </Link>
             </p>
           </div>
@@ -111,7 +109,7 @@ export function GoogleButton({
       type="button"
       onClick={onClick}
       disabled={loading || disabled}
-      className="focus-ring flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface-2/80 px-4 py-3 text-sm font-semibold text-ink transition hover:border-accent/50 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
+      className="focus-ring flex w-full items-center justify-center gap-3 rounded-lg bg-surface-2 px-4 py-3 text-sm font-bold text-ink transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <GoogleIcon />
       {loading ? 'Redirecting…' : label}
@@ -120,11 +118,5 @@ export function GoogleButton({
 }
 
 export function Divider({ label }: { label: string }) {
-  return (
-    <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-widest text-muted">
-      <span className="h-px flex-1 bg-line" />
-      {label}
-      <span className="h-px flex-1 bg-line" />
-    </div>
-  )
+  return <div className="my-5 text-center text-xs font-bold uppercase tracking-[0.24em] text-muted">{label}</div>
 }

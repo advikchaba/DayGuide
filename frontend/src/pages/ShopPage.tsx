@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Avatar, Badge, Button, Card, CoinPill, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
-import { getTheme } from '../lib/themes'
+import { getAvatar, getTheme } from '../lib/themes'
 import type { Profile, ShopItem, ShopPayload } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useTheme } from '../state/ThemeContext'
@@ -43,7 +43,7 @@ export function ShopPage() {
       const updated = await api.post<ShopPayload>(`/shop/${item.slug}/buy`)
       setShop(updated)
       if (item.kind === 'theme') setTheme(item.slug)
-      push(`Unlocked ${item.name}!`, 'success')
+      push(`Unlocked ${item.name}.`, 'success')
       const me = await refresh()
       if (me) applyProfile(me)
     } catch (error) {
@@ -87,6 +87,7 @@ export function ShopPage() {
   }
 
   const items = shop.items.filter((item) => item.kind === tab)
+  const currentAvatar = getAvatar(profile?.avatar_slug)
 
   return (
     <div className="space-y-6">
@@ -103,11 +104,11 @@ export function ShopPage() {
             type="button"
             onClick={() => setTab(kind)}
             className={[
-              'focus-ring rounded-xl border px-4 py-2 text-sm font-semibold transition',
-              tab === kind ? 'border-accent/60 bg-accent/15' : 'border-line bg-surface-2/50 text-muted hover:text-ink',
+              'focus-ring rounded-lg px-4 py-2 text-sm font-bold transition',
+              tab === kind ? 'bg-surface-2 text-ink' : 'bg-surface text-muted hover:text-ink',
             ].join(' ')}
           >
-            {kind === 'theme' ? '🎨 Themes' : '👤 Profile pictures'}
+            {kind === 'theme' ? 'Themes' : 'Profile pictures'}
           </button>
         ))}
 
@@ -121,36 +122,52 @@ export function ShopPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
           const theme = getTheme(item.slug)
+          const avatar = getAvatar(item.slug)
           const affordable = (profile?.coins ?? 0) >= item.price
+          const primary = theme.vars['--accent'] ?? item.meta.accent ?? '#dcdcdc'
+          const secondary = theme.vars['--accent-2'] ?? item.meta.accent2 ?? '#d3d3d3'
 
           return (
             <Card key={item.slug} className="flex flex-col gap-3">
               {/* Preview */}
-              <div
-                className="relative h-28 overflow-hidden rounded-2xl border border-line"
-                style={{
-                  background: item.kind === 'theme'
-                    ? `linear-gradient(120deg, ${item.meta.accent ?? theme.vars['--accent']}, ${item.meta.accent2 ?? theme.vars['--accent-2']})`
-                    : `radial-gradient(circle at 30% 25%, ${item.meta.accent ?? '#7C5CFF'}55, transparent 70%)`,
-                }}
-              >
-                {item.meta.image ? (
-                  <img
-                    src={item.meta.image}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover opacity-70"
-                    loading="lazy"
-                  />
-                ) : null}
-                <span className="absolute bottom-2 left-2 grid h-12 w-12 place-items-center rounded-xl bg-black/35 text-2xl backdrop-blur">
-                  {item.kind === 'avatar' ? item.meta.emoji : item.meta.emoji ?? '🎨'}
-                </span>
-                {item.equipped ? (
-                  <span className="absolute right-2 top-2">
-                    <Badge tone="success">equipped</Badge>
+              {item.kind === 'theme' ? (
+                <div className="relative h-28 overflow-hidden rounded-lg" style={{ background: primary }}>
+                  {theme.image ? (
+                    <img
+                      src={theme.image}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover opacity-40"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-3">
+                    <span className="rounded bg-black/35 px-2 py-1 text-xs font-bold text-white">{theme.name}</span>
+                    <span className="flex gap-1" aria-hidden>
+                      <span className="h-6 w-6 rounded" style={{ background: primary }} />
+                      <span className="h-6 w-6 rounded" style={{ background: secondary }} />
+                    </span>
+                  </div>
+                  {item.equipped ? (
+                    <span className="absolute right-2 top-2">
+                      <Badge tone="success">equipped</Badge>
+                    </span>
+                  ) : null}
+                </div>
+              ) : (
+                <div
+                  className="relative grid h-28 place-items-center overflow-hidden rounded-lg"
+                  style={{ background: `color-mix(in srgb, ${avatar.accent} 20%, var(--surface-2))` }}
+                >
+                  <span className="text-3xl font-black" style={{ color: avatar.accent }}>
+                    {avatar.initials}
                   </span>
-                ) : null}
-              </div>
+                  {item.equipped ? (
+                    <span className="absolute right-2 top-2">
+                      <Badge tone="success">equipped</Badge>
+                    </span>
+                  ) : null}
+                </div>
+              )}
 
               <div className="flex-1">
                 <div className="flex items-center justify-between gap-2">
@@ -165,7 +182,7 @@ export function ShopPage() {
                   {item.is_free ? (
                     <span className="text-emerald-300">Free</span>
                   ) : (
-                    <>🪙 {item.price.toLocaleString()}</>
+                    <>{item.price.toLocaleString()} coins</>
                   )}
                 </span>
 
@@ -197,19 +214,19 @@ export function ShopPage() {
       </div>
 
       <Card className="text-sm text-muted">
-        <p className="font-semibold text-ink">How to earn coins</p>
+        <p className="font-bold text-ink">How to earn coins</p>
         <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
-          <li>✅ +10 coins per task you complete</li>
-          <li>📸 +25 coins when a photo is verified (+10 bonus for clear proof)</li>
-          <li>🎉 +200 coins for a perfect routine, plus streak bonuses</li>
-          <li>⚔️ +200 coins for winning a ranked race</li>
+          <li>+10 coins per task you complete</li>
+          <li>+25 coins when a photo is verified (+10 bonus for clear proof)</li>
+          <li>+200 coins for a perfect routine, plus streak bonuses</li>
+          <li>+200 coins for winning a ranked race</li>
         </ul>
       </Card>
 
       {profile ? (
         <div className="flex items-center gap-3 text-xs text-muted">
-          <Avatar slug={profile.avatar_slug} size={28} /> Currently using {getTheme(profile.theme_slug).name} +{' '}
-          {profile.avatar_slug}
+          <Avatar slug={profile.avatar_slug} size={28} /> Currently using {getTheme(profile.theme_slug).name} and{' '}
+          {currentAvatar.name}
         </div>
       ) : null}
     </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Avatar, Card, RankBadge, SectionTitle, Spinner } from '../components/ui'
+import { Avatar, Card, RankBadge, RankMark, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { RANK_TIERS, type Leaderboard, type LeaderboardEntry } from '../lib/types'
 import { useToast } from '../state/ToastContext'
@@ -13,13 +13,6 @@ const METRICS = [
 ] as const
 
 type Metric = (typeof METRICS)[number]['key']
-
-function medal(position: number): string | null {
-  if (position === 1) return '🥇'
-  if (position === 2) return '🥈'
-  if (position === 3) return '🥉'
-  return null
-}
 
 export function LeaderboardPage() {
   const { profile } = useAuth()
@@ -50,11 +43,11 @@ export function LeaderboardPage() {
   const metricValue = (entry: LeaderboardEntry): string => {
     switch (metric) {
       case 'coins':
-        return `🪙 ${entry.coins.toLocaleString()}`
+        return `${entry.coins.toLocaleString()} coins`
       case 'matches_won':
-        return `🏅 ${entry.matches_won}`
+        return `${entry.matches_won} wins`
       case 'streak':
-        return `🔥 ${entry.streak}`
+        return `${entry.streak} day streak`
       default:
         return `${entry.elo} ELO`
     }
@@ -64,10 +57,10 @@ export function LeaderboardPage() {
     <div className="space-y-6">
       <SectionTitle
         title="Global ladder"
-        subtitle="Six tiers: Copper → Bronze → Silver → Gold → Platinum → Ruby. Everyone starts at 100 ELO."
+        subtitle="Six tiers, one ladder. Everyone starts at 100 ELO."
       />
 
-      {/* Tier strip */}
+      {/* Tier strip — the only place rank marks live. */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {RANK_TIERS.map((tier) => {
           const mine = profile?.rank.name === tier.name
@@ -75,11 +68,11 @@ export function LeaderboardPage() {
             <div
               key={tier.name}
               className={[
-                'glass-2 px-3 py-3 text-center transition',
-                mine ? 'ring-1 ring-offset-0' : '',
+                'flex flex-col items-center gap-2 rounded-lg px-3 py-4 text-center transition',
+                mine ? 'bg-surface-2' : 'bg-surface',
               ].join(' ')}
-              style={mine ? { boxShadow: `0 0 0 1px ${tier.color}` } : undefined}
             >
+              <RankMark name={tier.name} size={22} />
               <p className="text-xs font-bold" style={{ color: tier.color }}>
                 {tier.name}
               </p>
@@ -98,10 +91,8 @@ export function LeaderboardPage() {
             type="button"
             onClick={() => setMetric(option.key)}
             className={[
-              'focus-ring rounded-xl border px-3 py-2 text-sm font-semibold transition',
-              metric === option.key
-                ? 'border-accent/60 bg-accent/15'
-                : 'border-line bg-surface-2/50 text-muted hover:text-ink',
+              'focus-ring rounded-lg px-3 py-2 text-sm font-bold transition',
+              metric === option.key ? 'bg-surface-2 text-ink' : 'bg-surface text-muted hover:text-ink',
             ].join(' ')}
           >
             {option.label}
@@ -116,44 +107,40 @@ export function LeaderboardPage() {
       ) : (
         <>
           {board?.you ? (
-            <Card className="flex flex-wrap items-center gap-4 border-accent/40">
+            <Card className="flex flex-wrap items-center gap-4">
               <span className="text-sm font-bold text-muted">Your position</span>
-              <span className="text-2xl font-black">#{board.you.position}</span>
+              <span className="text-2xl font-bold">#{board.you.position}</span>
               <Avatar slug={board.you.avatar_slug} size={36} />
-              <span className="font-semibold">@{board.you.username}</span>
-              <RankBadge rank={{ name: board.you.rank_name, color: board.you.rank_color }} elo={board.you.elo} />
+              <span className="font-bold">@{board.you.username}</span>
+              <RankBadge rank={{ name: board.you.rank_name }} elo={board.you.elo} />
               <span className="ml-auto text-sm font-bold">{metricValue(board.you)}</span>
-              <span className="w-full text-xs text-muted sm:w-auto">
-                of {board.total_players} ranked players
-              </span>
+              <span className="w-full text-xs text-muted sm:w-auto">of {board.total_players} ranked players</span>
             </Card>
           ) : null}
 
-          <Card className="overflow-hidden p-0">
-            <ul className="divide-y divide-[color:var(--border)]">
+          <Card className="overflow-hidden p-2">
+            <ul className="space-y-1">
               {board?.entries.map((entry) => (
                 <li
                   key={entry.user_id}
                   className={[
-                    'flex flex-wrap items-center gap-3 px-4 py-3 transition',
-                    entry.is_you ? 'bg-accent/10' : 'hover:bg-surface-2/40',
+                    'flex flex-wrap items-center gap-3 rounded-lg px-3 py-3 transition',
+                    entry.is_you ? 'bg-accent-soft' : 'hover:bg-surface-2',
                   ].join(' ')}
                 >
-                  <span className="w-9 text-center text-sm font-black text-muted">
-                    {medal(entry.position) ?? `#${entry.position}`}
-                  </span>
+                  <span className="w-9 text-center text-sm font-bold text-muted">#{entry.position}</span>
                   <Avatar slug={entry.avatar_slug} size={38} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold">
                       @{entry.username}
-                      {entry.is_you ? <span className="ml-2 text-xs text-accent">you</span> : null}
+                      {entry.is_you ? <span className="ml-2 text-xs text-muted">you</span> : null}
                     </p>
                     <p className="text-xs text-muted">
-                      {entry.elo} ELO · {entry.matches_won} wins · 🪙 {entry.coins.toLocaleString()}
+                      {entry.elo} ELO · {entry.matches_won} wins · {entry.coins.toLocaleString()} coins
                     </p>
                   </div>
                   <div className="ml-auto flex items-center gap-3">
-                    <RankBadge rank={{ name: entry.rank_name, color: entry.rank_color }} size="sm" />
+                    <RankBadge rank={{ name: entry.rank_name }} size="sm" />
                     <span className="hidden text-sm font-bold sm:inline">{metricValue(entry)}</span>
                   </div>
                 </li>

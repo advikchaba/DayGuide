@@ -74,7 +74,7 @@ class Routine(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(80), nullable=False)
-    emoji: Mapped[str] = mapped_column(String(8), default="✅", nullable=False)
+    emoji: Mapped[str] = mapped_column(String(8), default="", nullable=False)
     is_ranked_ready: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 

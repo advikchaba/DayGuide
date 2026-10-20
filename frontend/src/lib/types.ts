@@ -192,10 +192,10 @@ export interface LedgerEntry {
 }
 
 export const RANK_TIERS: RankInfo[] = [
-  { name: 'Copper', min_elo: 100, max_elo: 500, color: '#C87F52', progress: 0, elo_to_next: 0 },
-  { name: 'Bronze', min_elo: 500, max_elo: 800, color: '#B08D57', progress: 0, elo_to_next: 0 },
-  { name: 'Silver', min_elo: 800, max_elo: 1200, color: '#C7CDD6', progress: 0, elo_to_next: 0 },
-  { name: 'Gold', min_elo: 1200, max_elo: 1600, color: '#F5C542', progress: 0, elo_to_next: 0 },
-  { name: 'Platinum', min_elo: 1600, max_elo: 2000, color: '#6FE3E1', progress: 0, elo_to_next: 0 },
-  { name: 'Ruby', min_elo: 2000, max_elo: 2400, color: '#FF4D6D', progress: 0, elo_to_next: 0 },
+  { name: 'Copper', min_elo: 100, max_elo: 500, color: '#B87333', progress: 0, elo_to_next: 0 },
+  { name: 'Bronze', min_elo: 500, max_elo: 800, color: '#8C5A2B', progress: 0, elo_to_next: 0 },
+  { name: 'Silver', min_elo: 800, max_elo: 1200, color: '#BFC5CC', progress: 0, elo_to_next: 0 },
+  { name: 'Gold', min_elo: 1200, max_elo: 1600, color: '#E0B020', progress: 0, elo_to_next: 0 },
+  { name: 'Platinum', min_elo: 1600, max_elo: 2000, color: '#2C7A7B', progress: 0, elo_to_next: 0 },
+  { name: 'Ruby', min_elo: 2000, max_elo: 2400, color: '#C41E3A', progress: 0, elo_to_next: 0 },
 ]

@@ -28,10 +28,10 @@ from .security import decode_dev_token, new_user_id
 logger = logging.getLogger("routinery.auth")
 
 _FIRST_ROUTINE = (
-    ("Wake up on time", "🌅", False),
-    ("Drink a glass of water", "💧", False),
-    ("Move your body for 20 minutes", "🏃", True),
-    ("Plan the top 3 tasks of the day", "📝", False),
+    ("Wake up on time", False),
+    ("Drink a glass of water", False),
+    ("Move your body for 20 minutes", True),
+    ("Plan the top 3 tasks of the day", False),
 )
 
 
@@ -129,14 +129,14 @@ def provision_profile(db: Session, identity: Identity) -> Profile:
     )
     db.add(profile)
 
-    routine = Routine(user_id=profile.id, name="Morning Routine", emoji="🌅")
+    routine = Routine(user_id=profile.id, name="Morning Routine", emoji="")
     db.add(routine)
     db.flush()
-    for position, (title, emoji, needs_proof) in enumerate(_FIRST_ROUTINE):
+    for position, (title, needs_proof) in enumerate(_FIRST_ROUTINE):
         db.add(
             Task(
                 routine_id=routine.id,
-                title=f"{emoji} {title}",
+                title=title,
                 requires_proof=needs_proof,
                 position=position,
             )
@@ -159,14 +159,14 @@ def create_local_user(db: Session, email: str, password_hash: str) -> Profile:
         theme_slug=DEFAULT_THEME,
     )
     db.add(profile)
-    routine = Routine(user_id=profile.id, name="Morning Routine", emoji="🌅")
+    routine = Routine(user_id=profile.id, name="Morning Routine", emoji="")
     db.add(routine)
     db.flush()
-    for position, (title, emoji, needs_proof) in enumerate(_FIRST_ROUTINE):
+    for position, (title, needs_proof) in enumerate(_FIRST_ROUTINE):
         db.add(
             Task(
                 routine_id=routine.id,
-                title=f"{emoji} {title}",
+                title=title,
                 requires_proof=needs_proof,
                 position=position,
             )

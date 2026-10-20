@@ -94,7 +94,7 @@ def create_routine(
     if not payload.tasks:
         raise HTTPException(status_code=400, detail="Add at least one task to your routine.")
 
-    routine = Routine(user_id=profile.id, name=payload.name.strip(), emoji=payload.emoji or "✅")
+    routine = Routine(user_id=profile.id, name=payload.name.strip(), emoji=payload.emoji or "")
     db.add(routine)
     db.flush()
 

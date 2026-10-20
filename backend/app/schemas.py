@@ -104,7 +104,7 @@ class TaskOut(BaseModel):
 
 class RoutineIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
-    emoji: str = Field(default="✅", max_length=8)
+    emoji: str = Field(default="", max_length=8)
     tasks: list[TaskIn] = Field(default_factory=list, max_length=40)
 
 
