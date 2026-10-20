@@ -138,7 +138,7 @@ def read_config() -> dict:
         "app_name": settings.app_name,
         "environment": settings.environment,
         "supabase_url": settings.supabase_url,
-        "supabase_anon_key": settings.supabase_anon_key,
+        "supabase_anon_key": settings.supabase_public_key,
         "supabase_configured": settings.supabase_configured,
         "dev_auth": settings.dev_auth_enabled,
         "vision_provider": settings.vision_provider,

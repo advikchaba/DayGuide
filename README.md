@@ -33,7 +33,7 @@ Open <http://localhost:5173>. Sign up with any email (e.g. `me@routinery.dev`) a
 
 * API docs: <http://localhost:8000/docs>
 * Health check: <http://localhost:8000/api/health>
-* Smoke test (60 assertions over the full product loop): `cd backend && python tests/smoke_test.py`
+* Smoke test (60+ assertions over the full product loop): `cd backend && python tests/smoke_test.py`
 
 > The dev provider creates real password hashes and real JWTs, but it is meant for local use.
 > Set `DEV_AUTH=false` before you ship.
@@ -43,25 +43,34 @@ Open <http://localhost:5173>. Sign up with any email (e.g. `me@routinery.dev`) a
 ## 2. Hooking up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. **Project Settings → API** and copy three values into `backend/.env`:
+2. **Project Settings → API** and copy the values into `backend/.env`:
 
 ```env
 SUPABASE_URL=https://YOUR-PROJECT.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOi...        # safe to expose, it is the public key
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi... # server only, never in the frontend
-SUPABASE_JWT_SECRET=your-jwt-secret     # Project Settings → API → JWT Settings
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...  # browser-safe
+SUPABASE_SECRET_KEY=sb_secret_...            # server only, never in the frontend
+SUPABASE_JWT_SECRET=your-jwt-secret          # Project Settings → API → JWT Settings
+SUPABASE_STORAGE_BUCKET=proofs
 ```
+
+The legacy names `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` work too — either pair is
+enough. The API creates the public Storage bucket on the first photo upload.
 
 3. **Authentication → Providers → Google**: enable it and paste the Client ID / Secret from
    [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
    Add the redirect URL Supabase shows you to *Authorised redirect URIs* in Google Cloud.
 4. **Authentication → URL Configuration**: set *Site URL* to `http://localhost:5173` and add
-   `http://localhost:5173/auth/callback` to *Redirect URLs*.
-5. Put your Postgres connection string in `backend/.env` so data lives in Supabase:
+   `http://localhost:5173/auth/callback` to *Redirect URLs*. When you deploy, also add the Vercel
+   frontend URL and `https://YOUR-APP.vercel.app/auth/callback`.
+5. Put your Postgres connection string in `backend/.env` so data lives in Supabase. On Vercel use
+   the **Session pooler** URI (IPv4-compatible), not the direct `db.*.supabase.co` host:
 
 ```env
-DATABASE_URL=postgresql+psycopg://postgres:YOUR-DB-PASSWORD@db.YOUR-PROJECT-REF.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres.YOUR-PROJECT-REF:YOUR-DB-PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres
 ```
+
+The API accepts `postgresql://` or `postgres://` and normalises it to the psycopg driver, so you can
+paste Supabase's string verbatim. URL-encode special characters in the password.
 
 The API creates every table on boot. `supabase/schema.sql` is the same schema as raw SQL if you
 prefer to run it in the Supabase SQL editor.
@@ -206,13 +215,76 @@ GET    /admin/proofs            moderator review queue
 
 ---
 
-## 7. Deployment notes
+## 7. Deploy on Vercel + Supabase
 
-* Set `DEV_AUTH=false`, a strong `DEV_JWT_SECRET`, and `ENVIRONMENT=production` (the demo ladder is
-  never seeded in production).
-* Serve `frontend/dist` from any static host; set `VITE_API_URL` to the API origin and add that
-  origin to `EXTRA_ORIGINS` on the backend.
-* Move uploads off local disk (`backend/app/services/storage.py` has one place to change) to S3 or
-  Supabase Storage for multi-instance deployments.
+The repo is set up for **two Vercel projects**: the existing frontend and a FastAPI backend project.
+Vercel's zero-config FastAPI runtime detects `app/main.py` when the backend project's **Root
+Directory** is `backend`.
+
+### Backend project
+
+1. In Vercel, **Add New → Project**, import this repo, and set **Root Directory** to `backend`.
+   Vercel detects FastAPI automatically; leave the build command empty. It installs
+   `backend/requirements.txt`.
+2. Add these environment variables (Production and Preview):
+
+| Variable | Value |
+| --- | --- |
+| `ENVIRONMENT` | `production` |
+| `FRONTEND_ORIGIN` | `https://routinery-sandy.vercel.app` |
+| `EXTRA_ORIGINS` | Custom frontend domains, comma-separated (optional) |
+| `DATABASE_URL` | Supabase **Session pooler** connection string |
+| `SUPABASE_URL` | `https://YOUR-PROJECT.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (or `SUPABASE_ANON_KEY`) |
+| `SUPABASE_SECRET_KEY` | `sb_secret_...` (or `SUPABASE_SERVICE_ROLE_KEY`) |
+| `SUPABASE_STORAGE_BUCKET` | `proofs` |
+| `SUPABASE_JWT_SECRET` | Optional; blank verifies tokens against Supabase Auth |
+| `DEV_AUTH` | `false` |
+| `DEV_JWT_SECRET` | A long random string |
+| `SEED_DEMO_PLAYERS` | `false` |
+| `VISION_PROVIDER` | `mock` (or `openai`) |
+| `AUTO_APPROVE_PROOFS` | `true` for the mock verifier |
+| `MAX_UPLOAD_BYTES` | `4000000` |
+| `PUBLIC_BASE_URL` | `https://YOUR-BACKEND.vercel.app` (fallback photos only) |
+
+3. Deploy and open `https://YOUR-BACKEND.vercel.app/api/health`. It should report
+   `"auth":"supabase"` and `"storage":"supabase"`. Also check
+   `https://YOUR-BACKEND.vercel.app/api/config` — `supabase_configured` must be `true`.
+4. `backend/vercel.json` raises the function limit to 60 seconds and `backend/.vercelignore` keeps
+   the local SQLite database, uploads and tests out of the deployment.
+
+### Frontend project
+
+1. In the existing Vercel frontend project, add `VITE_API_URL=https://YOUR-BACKEND.vercel.app` and
+   redeploy. Vite bakes this value into the bundle at build time, so a redeploy is required. Do not
+   put `SUPABASE_SECRET_KEY` (or `VITE_SUPABASE_*` values) in the frontend project — it receives the
+   publishable key from `/api/config` at runtime.
+2. In Supabase **Authentication → URL Configuration**, set *Site URL* to
+   `https://routinery-sandy.vercel.app` and add
+   `https://routinery-sandy.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs
+   for development.
+3. If you use a custom frontend domain, add it to `EXTRA_ORIGINS` on the backend and to Supabase's
+   redirect allowlist.
+
+### What runs where
+
+| Piece | Host |
+| --- | --- |
+| React app | Vercel static frontend |
+| FastAPI | Vercel FastAPI function (`backend/`) |
+| Profiles, routines, races, coins | Supabase Postgres |
+| Proof photos | Supabase Storage (`proofs` bucket, public) |
+| Auth | Supabase Auth (email/password + Google) |
+
+### Notes
+
+* Vercel Functions cap request bodies at about 4.5 MB. The frontend resizes large photos to JPEG
+  before upload, and `MAX_UPLOAD_BYTES` keeps the API below the platform limit.
+* Supabase projects on the free plan pause after inactivity; the first request after a pause can be
+  slow.
+* The API creates tables and syncs the shop catalogue on each cold start; both operations are
+  idempotent. Use the Session pooler so serverless instances do not exhaust Postgres connections.
+* Proof photos are public (same as the original local `/uploads` behaviour). If you need private
+  images, switch `public_url()` in `backend/app/services/storage.py` to signed URLs.
 * Rate-limit `/tasks/{id}/proof` and `/ranked/*/proof` at your reverse proxy — that's the only
   expensive endpoint.

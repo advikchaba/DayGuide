@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+routinery.db
+test_routinery.db
+test_uploads/
+uploads/
+tests/
+.pytest_cache/

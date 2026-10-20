@@ -79,7 +79,7 @@ def _verify_with_gotrue(token: str) -> dict | None:
             f"{settings.supabase_url.rstrip('/')}/auth/v1/user",
             headers={
                 "Authorization": f"Bearer {token}",
-                "apikey": settings.supabase_anon_key,
+                "apikey": settings.supabase_public_key,
             },
             timeout=8.0,
         )

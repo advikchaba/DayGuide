@@ -4,6 +4,7 @@ import { TaskRow } from '../components/TaskRow'
 import { RewardBurst } from '../components/RewardBurst'
 import { Avatar, Badge, Button, Card, CoinPill, EmptyState, ProgressBar, RankBadge, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
+import { prepareProofPhoto } from '../lib/images'
 import { RANK_TIERS, type ProofVerification, type Reward, type Routine, type Task, type TaskCompleteResponse } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useToast } from '../state/ToastContext'
@@ -72,7 +73,7 @@ export function RoutinePage() {
 
   const handleProof = async (task: Task, file: File) => {
     const form = new FormData()
-    form.append('file', file)
+    form.append('file', await prepareProofPhoto(file))
 
     try {
       const result = await api.upload<ProofVerification>(`/tasks/${task.id}/proof`, form)

@@ -30,11 +30,12 @@ async def lifespan(_app: FastAPI):
     with SessionLocal() as db:
         run_seed(db)
     logger.info(
-        "Routinery API ready | env=%s | db=%s | vision=%s | supabase=%s",
+        "Routinery API ready | env=%s | db=%s | vision=%s | supabase=%s | storage=%s",
         settings.environment,
         settings.database_url.split("://")[0],
         settings.vision_provider,
         "configured" if settings.supabase_configured else "dev-auth",
+        "supabase" if settings.supabase_storage_configured else "local",
     )
     yield
 
@@ -54,8 +55,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Proof photos are served straight from disk in development.
-app.mount("/uploads", StaticFiles(directory=str(uploads_root())), name="uploads")
+# Proof photos are served straight from disk in development. On Vercel the
+# filesystem is read-only/ephemeral, so production uses Supabase Storage URLs
+# and never mounts this directory.
+if not settings.supabase_storage_configured:
+    try:
+        app.mount("/uploads", StaticFiles(directory=str(uploads_root())), name="uploads")
+    except OSError as exc:
+        logger.warning("Local upload directory is unavailable; proof photos need Supabase Storage: %s", exc)
 
 for router in (
     auth_dev.router,
@@ -76,6 +83,7 @@ def health() -> dict:
         "environment": settings.environment,
         "auth": "supabase" if settings.supabase_configured else "dev",
         "vision": settings.vision_provider,
+        "storage": "supabase" if settings.supabase_storage_configured else "local",
     }
 
 

@@ -30,6 +30,14 @@ os.environ.update(
     AUTO_APPROVE_PROOFS="true",
     SEED_DEMO_PLAYERS="true",
     UPLOAD_DIR=str(ROOT / "test_uploads"),
+    # Force the offline provider even when a developer has real Supabase
+    # credentials in backend/.env.
+    SUPABASE_URL="",
+    SUPABASE_ANON_KEY="",
+    SUPABASE_PUBLISHABLE_KEY="",
+    SUPABASE_SERVICE_ROLE_KEY="",
+    SUPABASE_SECRET_KEY="",
+    SUPABASE_STORAGE_BUCKET="",
 )
 
 from fastapi.testclient import TestClient  # noqa: E402

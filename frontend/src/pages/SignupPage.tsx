@@ -221,9 +221,9 @@ export function SignupPage() {
 
       {mode === 'dev' ? (
         <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-          Demo mode: emails are not verified yet. Add your Supabase URL and anon key to{' '}
-          <code className="text-ink">backend/.env</code> and restart the API to require real, confirmed emails and enable
-          Google sign-in.
+          Demo mode: emails are not verified yet. Add your Supabase URL and publishable key to{' '}
+          <code className="text-ink">backend/.env</code> locally, or to the Vercel backend project, then redeploy to
+          require real, confirmed emails and enable Google sign-in.
         </p>
       ) : null}
     </AuthShell>

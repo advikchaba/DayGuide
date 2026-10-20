@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,9 +28,13 @@ class Settings(BaseSettings):
     # --- Supabase ---------------------------------------------------------
     supabase_url: str = ""
     supabase_anon_key: str = ""
+    # New Supabase dashboard naming. The legacy names above still work.
+    supabase_publishable_key: str = ""
     supabase_service_role_key: str = ""
+    supabase_secret_key: str = ""
     supabase_jwt_secret: str = ""
     supabase_jwt_audience: str = "authenticated"
+    supabase_storage_bucket: str = "proofs"
 
     # --- Local dev auth ---------------------------------------------------
     dev_auth: bool = True
@@ -42,6 +47,9 @@ class Settings(BaseSettings):
     vision_model: str = "gpt-4o-mini"
     auto_approve_proofs: bool = True
     upload_dir: str = "uploads"
+    max_upload_bytes: int = 8 * 1024 * 1024
+    # Optional absolute API origin used for fallback local uploads (Vercel).
+    public_base_url: str = ""
 
     admin_emails: str = ""
 
@@ -53,9 +61,9 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     @property
     def cors_origins(self) -> list[str]:
-        origins = {o.strip() for o in self.extra_origins.split(",") if o.strip()}
+        origins = {o.strip().rstrip("/") for o in self.extra_origins.split(",") if o.strip()}
         if self.frontend_origin.strip():
-            origins.add(self.frontend_origin.strip())
+            origins.add(self.frontend_origin.strip().rstrip("/"))
         return sorted(origins)
 
     @property
@@ -63,8 +71,22 @@ class Settings(BaseSettings):
         return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
 
     @property
+    def supabase_public_key(self) -> str:
+        """The browser-safe Supabase key (legacy anon or new publishable)."""
+        return (self.supabase_anon_key or self.supabase_publishable_key).strip()
+
+    @property
+    def supabase_service_key(self) -> str:
+        """The server-only Supabase key used for Storage uploads."""
+        return (self.supabase_service_role_key or self.supabase_secret_key).strip()
+
+    @property
     def supabase_configured(self) -> bool:
-        return bool(self.supabase_url and self.supabase_anon_key)
+        return bool(self.supabase_url.strip() and self.supabase_public_key)
+
+    @property
+    def supabase_storage_configured(self) -> bool:
+        return bool(self.supabase_url.strip() and self.supabase_service_key and self.supabase_storage_bucket.strip())
 
     @property
     def dev_auth_enabled(self) -> bool:
@@ -82,6 +104,11 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment.lower() in {"production", "prod"}
+
+    @property
+    def is_serverless(self) -> bool:
+        """True inside a Vercel/edge function where connections must not pool."""
+        return bool(os.getenv("VERCEL"))
 
 
 @lru_cache

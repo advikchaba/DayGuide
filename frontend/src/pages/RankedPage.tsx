@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Avatar, Badge, Button, Card, EmptyState, Modal, ProgressBar, RankBadge, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
+import { prepareProofPhoto } from '../lib/images'
 import type { Match, MatchTask, ProofVerification, Routine } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useToast } from '../state/ToastContext'
@@ -129,7 +130,7 @@ export function RankedPage() {
 
     const form = new FormData()
     form.append('match_task_id', String(task.id))
-    form.append('file', file)
+    form.append('file', await prepareProofPhoto(file))
 
     try {
       const result = await api.upload<ProofVerification>(`/ranked/matches/${match.id}/proof`, form)
