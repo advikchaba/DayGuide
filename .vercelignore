@@ -1,0 +1,27 @@
+# Local env files (keep the templates)
+.env
+.env.*
+!.env.example
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+backend/routinery.db
+backend/test_routinery.db
+backend/uploads/
+backend/test_uploads/
+backend/tests/
+.pytest_cache/
+
+# Node / Vite
+**/node_modules/
+frontend/dist/
+frontend/.vite/
+**/*.tsbuildinfo
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

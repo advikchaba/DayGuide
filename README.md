@@ -217,21 +217,43 @@ GET    /admin/proofs            moderator review queue
 
 ## 7. Deploy on Vercel + Supabase
 
-The repo is set up for **two Vercel projects**: the existing frontend and a FastAPI backend project.
-Vercel's zero-config FastAPI runtime detects `app/main.py` when the backend project's **Root
-Directory** is `backend`.
+The repo deploys as **one Vercel project** containing two [Vercel Services](https://vercel.com/docs/services):
+a Vite frontend and a FastAPI backend. The root `vercel.json` declares both services and routes
+`/api/*` to FastAPI while every other path goes to the Vite app. Both share one domain, so the
+frontend calls `/api` same-origin — no backend URL, CORS setup, or `VITE_API_URL` is needed.
 
-### Backend project
+> Vercel shows these as **services inside one project**, not as two projects. If you already created
+> a separate backend project, delete it. The frontend and backend must live in the same project for
+> the shared-domain routing to work.
 
-1. In Vercel, **Add New → Project**, import this repo, and set **Root Directory** to `backend`.
-   Vercel detects FastAPI automatically; leave the build command empty. It installs
-   `backend/requirements.txt`.
-2. Add these environment variables (Production and Preview):
+### Create or convert the project
+
+If you already have the `routinery-sandy` frontend project, convert it so the domain and Supabase
+redirect URLs stay the same:
+
+1. Open the project → **Settings → General**.
+2. Set **Root Directory** to the repository root (`.`), not `frontend` or `backend`.
+3. Set **Framework Preset** to **Services**. The root `vercel.json` defines the two services.
+4. Clear any project-level **Build Command**, **Output Directory**, or **Install Command** overrides.
+   Each service builds itself.
+5. Remove `VITE_API_URL` and all `VITE_SUPABASE_*` / `SUPABASE_*` variables from this project, then
+   add the variables below at the project level.
+6. Redeploy. If Vercel does not show the **Services** preset, make sure `vercel.json` is on `main`
+   and redeploy; Services is in beta but available on all plans.
+
+To start fresh instead, use **Add New → Project**, import this repo, and apply the same settings.
+A new project gets a new domain, so update the Supabase URLs and `FRONTEND_ORIGIN` below.
+
+### Environment variables
+
+Add these at the **project** level for Production and Preview. Vercel makes them available to both
+services; Vite only exposes variables prefixed with `VITE_`, so the secret key never reaches the
+browser bundle.
 
 | Variable | Value |
 | --- | --- |
 | `ENVIRONMENT` | `production` |
-| `FRONTEND_ORIGIN` | `https://routinery-sandy.vercel.app` |
+| `FRONTEND_ORIGIN` | `https://routinery-sandy.vercel.app` (or your project domain) |
 | `EXTRA_ORIGINS` | Custom frontend domains, comma-separated (optional) |
 | `DATABASE_URL` | Supabase **Session pooler** connection string |
 | `SUPABASE_URL` | `https://YOUR-PROJECT.supabase.co` |
@@ -245,39 +267,52 @@ Directory** is `backend`.
 | `VISION_PROVIDER` | `mock` (or `openai`) |
 | `AUTO_APPROVE_PROOFS` | `true` for the mock verifier |
 | `MAX_UPLOAD_BYTES` | `4000000` |
-| `PUBLIC_BASE_URL` | `https://YOUR-BACKEND.vercel.app` (fallback photos only) |
+| `PUBLIC_BASE_URL` | Optional; only used if photos fall back to local disk |
 
-3. Deploy and open `https://YOUR-BACKEND.vercel.app/api/health`. It should report
-   `"auth":"supabase"` and `"storage":"supabase"`. Also check
-   `https://YOUR-BACKEND.vercel.app/api/config` — `supabase_configured` must be `true`.
-4. `backend/vercel.json` raises the function limit to 60 seconds and `backend/.vercelignore` keeps
-   the local SQLite database, uploads and tests out of the deployment.
+Do **not** set `VITE_API_URL` for the one-project setup. Leave it unset/blank so the frontend uses
+same-origin `/api`. Do not set `VITE_SUPABASE_*`; the frontend gets the publishable config from
+`GET /api/config` at runtime.
 
-### Frontend project
+### Verify the deployment
 
-1. In the existing Vercel frontend project, add `VITE_API_URL=https://YOUR-BACKEND.vercel.app` and
-   redeploy. Vite bakes this value into the bundle at build time, so a redeploy is required. Do not
-   put `SUPABASE_SECRET_KEY` (or `VITE_SUPABASE_*` values) in the frontend project — it receives the
-   publishable key from `/api/config` at runtime.
-2. In Supabase **Authentication → URL Configuration**, set *Site URL* to
-   `https://routinery-sandy.vercel.app` and add
-   `https://routinery-sandy.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs
-   for development.
-3. If you use a custom frontend domain, add it to `EXTRA_ORIGINS` on the backend and to Supabase's
-   redirect allowlist.
+Open:
+
+```text
+https://routinery-sandy.vercel.app/api/health
+```
+
+It should report `"auth":"supabase"` and `"storage":"supabase"`. Then:
+
+```text
+https://routinery-sandy.vercel.app/api/config
+```
+
+`supabase_configured` must be `true`. If `/api/health` returns the frontend HTML, the root
+`vercel.json` was not applied — check the root directory, the Services preset, and redeploy.
+
+### Supabase Auth URLs
+
+In Supabase **Authentication → URL Configuration**, set *Site URL* to
+`https://routinery-sandy.vercel.app` and add
+`https://routinery-sandy.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs for
+development. If you use a custom domain, add it to `EXTRA_ORIGINS` and to Supabase's redirect
+allowlist.
 
 ### What runs where
 
 | Piece | Host |
 | --- | --- |
-| React app | Vercel static frontend |
-| FastAPI | Vercel FastAPI function (`backend/`) |
+| React app | Vercel service `frontend` |
+| FastAPI | Vercel service `backend` (`backend/`) |
 | Profiles, routines, races, coins | Supabase Postgres |
 | Proof photos | Supabase Storage (`proofs` bucket, public) |
 | Auth | Supabase Auth (email/password + Google) |
 
 ### Notes
 
+* The function limit for the FastAPI service is 60 seconds, set under `services.backend.functions`
+  in the root `vercel.json`. `backend/.vercelignore` keeps local databases, uploads, and tests out
+  of the backend build.
 * Vercel Functions cap request bodies at about 4.5 MB. The frontend resizes large photos to JPEG
   before upload, and `MAX_UPLOAD_BYTES` keeps the API below the platform limit.
 * Supabase projects on the free plan pause after inactivity; the first request after a pause can be
