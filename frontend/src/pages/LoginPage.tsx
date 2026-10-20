@@ -114,9 +114,10 @@ export function LoginPage() {
 
       {mode === 'dev' ? (
         <p className="mt-4 rounded-xl border border-line bg-surface-2/60 px-3 py-2 text-[11px] leading-relaxed text-muted">
-          Running on the local dev auth provider — no Supabase project needed. Add your Supabase URL and
-          publishable key to <code className="text-ink">backend/.env</code> locally, or to the Vercel backend
-          project, then redeploy to enable real accounts and Google sign-in.
+          No Supabase credentials were found, so the local dev auth provider is active. Add
+          <code className="text-ink">SUPABASE_URL</code> and
+          <code className="text-ink">SUPABASE_PUBLISHABLE_KEY</code> to{' '}
+          <code className="text-ink">backend/.env</code>, restart the API, then refresh this page.
         </p>
       ) : null}
     </AuthShell>

@@ -178,7 +178,7 @@ export async function signInWithGoogle(redirectPath = '/dashboard'): Promise<voi
     return
   }
   throw new Error(
-    'Google sign-in needs Supabase. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY on the API (backend/.env locally, or the Vercel backend project) and redeploy.',
+    'Google sign-in needs Supabase. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY on the API (backend/.env locally, or the Vercel project), restart the API, and refresh this page.',
   )
 }
 
