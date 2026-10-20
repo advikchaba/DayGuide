@@ -43,7 +43,7 @@ Open <http://localhost:5173>. Sign up with any email (e.g. `me@routinery.dev`) a
 ## 2. Hooking up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. **Project Settings → API** and copy the values into `backend/.env`:
+2. Open **Settings → API Keys** (or the **Connect** dialog) and copy the values into `backend/.env`:
 
 ```env
 SUPABASE_URL=https://YOUR-PROJECT.supabase.co
