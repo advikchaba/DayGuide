@@ -69,6 +69,23 @@ def _storage_headers() -> dict[str, str]:
     return headers
 
 
+def _bucket_is_missing(response: httpx.Response) -> bool:
+    """Supabase returns HTTP 400 with a nested 404 for a missing bucket."""
+    if response.status_code == 404:
+        return True
+    if response.status_code != 400:
+        return False
+    try:
+        payload = response.json()
+    except ValueError:
+        return False
+    return (
+        str(payload.get("statusCode")) == "404"
+        or payload.get("code") == "NoSuchBucket"
+        or payload.get("error") == "Bucket not found"
+    )
+
+
 def _ensure_bucket() -> None:
     """Create the public proofs bucket once per process if it is missing."""
     global _bucket_ready
@@ -86,7 +103,7 @@ def _ensure_bucket() -> None:
     bucket_url = f"{base}/storage/v1/bucket/{quote(bucket, safe='')}"
     try:
         response = httpx.get(bucket_url, headers=_storage_headers(), timeout=10.0)
-        if response.status_code == 404:
+        if _bucket_is_missing(response):
             created = httpx.post(
                 f"{base}/storage/v1/bucket",
                 headers={**_storage_headers(), "Content-Type": "application/json"},
