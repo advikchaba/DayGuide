@@ -61,7 +61,7 @@ enough. The API creates the public Storage bucket on the first photo upload.
    Add the redirect URL Supabase shows you to *Authorised redirect URIs* in Google Cloud.
 4. **Authentication → URL Configuration**: set *Site URL* to `http://localhost:5173` and add
    `http://localhost:5173/auth/callback` to *Redirect URLs*. When you deploy, also add the Vercel
-   frontend URL and `https://YOUR-APP.vercel.app/auth/callback`.
+   project URL and `https://YOUR-APP.vercel.app/auth/callback`.
 5. Put your Postgres connection string in `backend/.env` so data lives in Supabase. On Vercel use
    the **Session pooler** URI (IPv4-compatible), not the direct `db.*.supabase.co` host:
 
