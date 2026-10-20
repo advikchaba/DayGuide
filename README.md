@@ -228,16 +228,17 @@ frontend calls `/api` same-origin — no backend URL, CORS setup, or `VITE_API_U
 
 ### Create or convert the project
 
-If you already have the `routinery-sandy` frontend project, convert it so the domain and Supabase
-redirect URLs stay the same:
+The project is `routinery` with the production domain `https://routinery-sigma.vercel.app`. If you are
+converting an existing frontend project, keep the domain and Supabase redirect URLs aligned:
 
 1. Open the project → **Settings → General**.
 2. Set **Root Directory** to the repository root (`.`), not `frontend` or `backend`.
 3. Set **Framework Preset** to **Services**. The root `vercel.json` defines the two services.
 4. Clear any project-level **Build Command**, **Output Directory**, or **Install Command** overrides.
    Each service builds itself.
-5. Remove `VITE_API_URL` and all `VITE_SUPABASE_*` / `SUPABASE_*` variables from this project, then
-   add the variables below at the project level.
+5. Remove `VITE_API_URL` and any project-level backend variables from the old frontend project, then
+   add the variables below at the project level. The two public Supabase values are also exposed to
+   Vite as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` so auth works before `/api/config` loads.
 6. Redeploy. If Vercel does not show the **Services** preset, make sure `vercel.json` is on `main`
    and redeploy; Services is in beta but available on all plans.
 
@@ -253,7 +254,7 @@ browser bundle.
 | Variable | Value |
 | --- | --- |
 | `ENVIRONMENT` | `production` |
-| `FRONTEND_ORIGIN` | `https://routinery-sandy.vercel.app` (or your project domain) |
+| `FRONTEND_ORIGIN` | `https://routinery-sigma.vercel.app` (or your project domain) |
 | `EXTRA_ORIGINS` | Custom frontend domains, comma-separated (optional) |
 | `DATABASE_URL` | Supabase **Session pooler** connection string |
 | `SUPABASE_URL` | `https://YOUR-PROJECT.supabase.co` |
@@ -267,24 +268,27 @@ browser bundle.
 | `VISION_PROVIDER` | `mock` (or `openai`) |
 | `AUTO_APPROVE_PROOFS` | `true` for the mock verifier |
 | `MAX_UPLOAD_BYTES` | `4000000` |
+| `VITE_SUPABASE_URL` | Same value as `SUPABASE_URL` |
+| `VITE_SUPABASE_ANON_KEY` | Same value as `SUPABASE_PUBLISHABLE_KEY` |
 | `PUBLIC_BASE_URL` | Optional; only used if photos fall back to local disk |
 
 Do **not** set `VITE_API_URL` for the one-project setup. Leave it unset/blank so the frontend uses
-same-origin `/api`. Do not set `VITE_SUPABASE_*`; the frontend gets the publishable config from
-`GET /api/config` at runtime.
+same-origin `/api`. The frontend can also load the public Supabase config from `GET /api/config` at
+runtime, but setting the two `VITE_` values above means the Supabase client is ready even if that
+request is slow.
 
 ### Verify the deployment
 
 Open:
 
 ```text
-https://routinery-sandy.vercel.app/api/health
+https://routinery-sigma.vercel.app/api/health
 ```
 
 It should report `"auth":"supabase"` and `"storage":"supabase"`. Then:
 
 ```text
-https://routinery-sandy.vercel.app/api/config
+https://routinery-sigma.vercel.app/api/config
 ```
 
 `supabase_configured` must be `true`. If `/api/health` returns the frontend HTML, the root
@@ -293,8 +297,8 @@ https://routinery-sandy.vercel.app/api/config
 ### Supabase Auth URLs
 
 In Supabase **Authentication → URL Configuration**, set *Site URL* to
-`https://routinery-sandy.vercel.app` and add
-`https://routinery-sandy.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs for
+`https://routinery-sigma.vercel.app` and add
+`https://routinery-sigma.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs for
 development. If you use a custom domain, add it to `EXTRA_ORIGINS` and to Supabase's redirect
 allowlist.
 
