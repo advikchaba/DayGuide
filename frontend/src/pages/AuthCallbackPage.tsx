@@ -15,12 +15,19 @@ export function AuthCallbackPage() {
   const { refresh, profile } = useAuth()
   const [message, setMessage] = useState('Finishing sign-in…')
   const next = params.get('next') ?? '/dashboard'
+  const errorDescription = params.get('error_description') ?? params.get('error')
 
   useEffect(() => {
     let cancelled = false
     let attempts = 0
 
     const run = async () => {
+      if (errorDescription) {
+        setMessage(`Sign-in failed: ${errorDescription.replace(/\+/g, ' ')}`)
+        window.setTimeout(() => navigate('/login', { replace: true }), 3500)
+        return
+      }
+
       const session = await getSupabaseSession()
       if (cancelled) return
 
@@ -32,9 +39,9 @@ export function AuthCallbackPage() {
       }
 
       attempts += 1
-      if (attempts > 12) {
-        setMessage('We could not complete the sign-in. Please try again.')
-        window.setTimeout(() => navigate('/login', { replace: true }), 2200)
+      if (attempts > 30) {
+        setMessage('We could not complete the sign-in. Please log in again.')
+        window.setTimeout(() => navigate('/login', { replace: true }), 3000)
       } else {
         window.setTimeout(run, 350)
       }
@@ -44,7 +51,7 @@ export function AuthCallbackPage() {
     return () => {
       cancelled = true
     }
-  }, [navigate, next, refresh])
+  }, [errorDescription, navigate, next, refresh])
 
   useEffect(() => {
     if (profile?.username) navigate(next, { replace: true })
