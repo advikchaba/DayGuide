@@ -1,13 +1,13 @@
 # Routinery — turn your daily routine into competitiveness
 
-A full-stack routine habit game: build a daily checklist, tick tasks off for coins, spend them on
-themes and profile pictures, and race other players up a six-tier ELO ladder where every claim has to
-survive photo verification.
+A full-stack routine habit game: build a daily checklist with a time for every task, check in near
+that time to earn coins and ELO, spend the coins on themes and profile pictures, and climb a six-tier
+leaderboard based on timing accuracy.
 
 * **Frontend** — React 18 + TypeScript + Vite + Tailwind (dark by default, `#FFFFFF` text)
 * **Backend** — Python 3.12 + FastAPI + SQLAlchemy
 * **Auth** — Supabase (email/password **and** Google OAuth) with an offline dev provider fallback
-* **Verification** — pluggable photo verifier (vision model, or a human review queue)
+* **Scoring** — local-time check-ins scored against each task's scheduled time
 
 ---
 
@@ -33,7 +33,7 @@ Open <http://localhost:5173>. Sign up with any email (e.g. `me@routinery.dev`) a
 
 * API docs: <http://localhost:8000/docs>
 * Health check: <http://localhost:8000/api/health>
-* Smoke test (60+ assertions over the full product loop): `cd backend && python tests/smoke_test.py`
+* Smoke test (legacy walkthrough from before the timing system): `cd backend && python tests/smoke_test.py`
 
 > The dev provider creates real password hashes and real JWTs, but it is meant for local use.
 > Set `DEV_AUTH=false` before you ship.
@@ -50,11 +50,11 @@ SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_...  # browser-safe
 SUPABASE_SECRET_KEY=sb_secret_...            # server only, never in the frontend
 SUPABASE_JWT_SECRET=your-jwt-secret          # Project Settings → API → JWT Settings
-SUPABASE_STORAGE_BUCKET=proofs
+SUPABASE_STORAGE_BUCKET=proofs               # legacy; optional in the timing-only flow
 ```
 
 The legacy names `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` work too — either pair is
-enough. The API creates the public Storage bucket on the first photo upload.
+enough.
 
 3. **Authentication → Providers → Google**: enable it and paste the Client ID / Secret from
    [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
@@ -90,35 +90,23 @@ picks Supabase when it is configured and the dev provider otherwise.
 
 ---
 
-## 3. Photo verification
+## 3. Timing accuracy
 
-`POST /api/tasks/{id}/proof` and `POST /api/ranked/matches/{id}/proof` take a JPEG/PNG/WebP photo
-plus the claimed task, then run `backend/app/services/vision.py`:
+Every task stores a local wall-clock `scheduled_time` (`HH:MM`). When the user ticks a task, the
+browser sends its local time and date, and the API compares the two:
 
-| `VISION_PROVIDER` | Behaviour |
-| --- | --- |
-| `mock` (default) | Validates the file really is an image and auto-approves (great for local dev) |
-| `openai` | Sends the photo to any OpenAI-compatible vision endpoint and reads back `{verified, confidence, reason}` |
-| `off` | Every proof goes to the human review queue |
+| Difference from schedule | ELO | Coins |
+| --- | --- | --- |
+| 0 minutes | +50 | task coin value |
+| 10 minutes | +48 | task coin value |
+| 20 minutes | +45 | task coin value |
+| 21 minutes | −10 | none |
+| 60 minutes | −18 | none |
+| 120+ minutes | −30 | none |
 
-To turn on real verification:
-
-```env
-VISION_PROVIDER=openai
-VISION_API_KEY=sk-...
-VISION_MODEL=gpt-4o-mini
-VISION_BASE_URL=https://api.openai.com/v1
-```
-
-Anything the verifier is unsure about becomes `pending` instead of being rejected, and lands in the
-moderator queue:
-
-```env
-ADMIN_EMAILS=you@example.com
-```
-
-* `GET  /api/admin/proofs?status=pending` — review queue with images
-* `POST /api/admin/proofs/{id}/review` — `{"approve": true}` pays the reward, `false` reverses it
+ELO is clamped to the published ladder floor/ceiling (100–2400). Un-ticking a task reverses the
+actual coins and ELO it granted. A **perfect day** requires every task to be checked in on time and
+pays +200 coins (+5 per streak day, capped at +50).
 
 ---
 
@@ -126,11 +114,9 @@ ADMIN_EMAILS=you@example.com
 
 | Reward | Coins | ELO |
 | --- | --- | --- |
-| Complete a task | +10 (per-task value) | — |
-| Photo-verified task | +25 (+10 bonus at high confidence) | — |
-| **Perfect routine** | **+200** (+5/day streak bonus, capped at +50) | **+50** |
-| Win a ranked race | +200 | +50 |
-| Lose a ranked race | +10 | −15 (floored at 100) |
+| On-time task (within 20 min) | task value (10 by default) | **+45 to +50** |
+| Late task (more than 20 min off) | — | **−10 to −30** |
+| **Perfect on-time routine** | **+200** (+5/day streak bonus, capped at +50) | — |
 
 | Tier | ELO range |
 | --- | --- |
@@ -144,7 +130,8 @@ ADMIN_EMAILS=you@example.com
 Prices: colour themes **10,000**, meme/image themes **20,000**, profile pictures **600**, light +
 dark themes free, first username free, later username changes **400** (taken names are refused).
 Coins and ELO are only ever moved server-side (`backend/app/economy.py`), and every movement is
-written to `ledger_entries`. Un-ticking a task reverses its coins so the checklist can't be farmed.
+written to `ledger_entries`. The reward stored on a completion is the *applied* delta, so reversing
+a task at the ELO floor cannot award free points.
 
 ---
 
@@ -156,12 +143,14 @@ written to `ledger_entries`. Un-ticking a task reverses its coins so the checkli
 | Sign up | `/signup` | Email, password, confirm password, optional username, Google OAuth button |
 | Log in | `/login` | Email + password, Google OAuth button, dev-provider notice |
 | Onboarding | `/onboarding` | Claim the free first username (live availability check) |
-| Routine | `/app` | Today's checklist, coin/ELO rewards, photo proof per task, streak + rank progress |
-| Builder | `/routines/new` | Name, icon, templates, per-task coin value and proof requirement |
-| Ranked | `/ranked` | Queue or join by code, live scoreboard, per-item photo proofs, result modal |
+| Routine | `/app` | Today's timed checklist, per-task timing rewards, streak + progress |
+| Builder | `/routines/new` | Name, templates, per-task time and coin value |
 | Shop | `/shop` | 13 themes + 18 avatars, buy/equip, affordability checks |
-| Ladder | `/leaderboard` | Top 50 by ELO / coins / wins / streak + your own position |
-| Profile | `/profile` | Stats, username change, coin ledger, proof gallery |
+| Ladder | `/leaderboard` | Top 50 by ELO / coins / streak + your own position |
+| Profile | `/profile` | Stats, username change, coin/ELO ledger, timing rules |
+
+New accounts start with **no routine** and are sent straight to the builder after claiming a
+username.
 
 ---
 
@@ -172,20 +161,20 @@ backend/
   app/
     main.py            FastAPI app, CORS, static uploads, routers
     config.py          settings from .env
-    database.py        engine/session, SQLite + Postgres
-    models.py          profiles, routines, tasks, completions, shop, matches, proofs
-    economy.py         ELO tiers, payouts, perfect-day pipeline, streaks
+    database.py        engine/session, SQLite + Postgres + additive migrations
+    models.py          profiles, routines, tasks, completions, shop, ledger
+    economy.py         ELO tiers, timing rewards, perfect-day pipeline, streaks
     auth.py            Supabase/dev token verification + profile provisioning
     serializers.py     rows -> API payloads
-    routers/           auth_dev, profile, routines, shop, ranked, leaderboard(+admin)
-    services/          vision.py (verification), proofs.py (rewards), storage.py (uploads)
-  tests/smoke_test.py  end-to-end API walkthrough
+    routers/           auth_dev, profile, routines, shop, leaderboard
+    services/          storage and legacy verification helpers
+  tests/smoke_test.py  legacy API walkthrough (predates the timing system)
 frontend/
-  src/lib/             supabase.ts, authClient.ts, api.ts, themes.ts, types.ts
+  src/lib/             supabase.ts, authClient.ts, api.ts, themes.ts, types.ts, time.ts
   src/state/           AuthContext, ThemeContext, ToastContext
   src/components/      UI kit, AppLayout, AuthShell, TaskRow, RewardBurst, ProtectedRoute
   src/pages/           Landing, Login, Signup, AuthCallback, Onboarding, Routine, Builder,
-                       Ranked, Shop, Leaderboard, Profile
+                       Shop, Leaderboard, Profile
 supabase/schema.sql    the same schema as raw SQL
 ```
 
@@ -195,22 +184,18 @@ supabase/schema.sql    the same schema as raw SQL
 GET    /me                      profile + rank + stats
 POST   /me/username             claim/change username (400 coins after the first)
 GET    /me/ledger               coin + ELO history
-GET    /me/proofs               your uploaded proofs
-GET    /routines                routines with today's completion state
-POST   /routines                create a routine (with tasks)
-POST   /tasks/{id}/complete     tick a task (+coins, perfect-day bonus)
-DELETE /tasks/{id}/complete     un-tick (reverses rewards)
-POST   /tasks/{id}/proof        upload photo proof -> verification
+GET    /routines                routines with today's completion state (?local_date=YYYY-MM-DD)
+POST   /routines                create a routine (tasks include scheduled_time)
+PATCH  /routines/{id}           rename a routine
+POST   /routines/{id}/tasks     quick-add a timed task
+PATCH  /tasks/{id}              edit a task (title, time, coin value)
+DELETE /tasks/{id}              remove a task
+POST   /tasks/{id}/complete     tick a task with {local_time, local_date}
+DELETE /tasks/{id}/complete     un-tick and reverse its coins/ELO (?local_date=YYYY-MM-DD)
 GET    /shop                    catalog with owned/equipped flags
 POST   /shop/{slug}/buy         spend coins
 POST   /shop/{slug}/equip       equip an owned cosmetic
-POST   /ranked/queue            find an opponent / open a race
-POST   /ranked/join             join with a 6-character code
-GET    /ranked/matches/{id}     live race state
-POST   /ranked/matches/{id}/proof  photo-verify a race item
-DELETE /ranked/matches/{id}     cancel or forfeit
 GET    /leaderboard             ladder (?metric=elo|coins|matches_won|streak)
-GET    /admin/proofs            moderator review queue
 ```
 
 ---
@@ -260,17 +245,13 @@ browser bundle.
 | `SUPABASE_URL` | `https://YOUR-PROJECT.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (or `SUPABASE_ANON_KEY`) |
 | `SUPABASE_SECRET_KEY` | `sb_secret_...` (or `SUPABASE_SERVICE_ROLE_KEY`) |
-| `SUPABASE_STORAGE_BUCKET` | `proofs` |
+| `SUPABASE_STORAGE_BUCKET` | `proofs` (legacy storage bucket; unused by the timing flow) |
 | `SUPABASE_JWT_SECRET` | Optional; blank verifies tokens against Supabase Auth |
 | `DEV_AUTH` | `false` |
 | `DEV_JWT_SECRET` | A long random string |
 | `SEED_DEMO_PLAYERS` | `false` |
-| `VISION_PROVIDER` | `mock` (or `openai`) |
-| `AUTO_APPROVE_PROOFS` | `true` for the mock verifier |
-| `MAX_UPLOAD_BYTES` | `4000000` |
 | `VITE_SUPABASE_URL` | Same value as `SUPABASE_URL` |
 | `VITE_SUPABASE_ANON_KEY` | Same value as `SUPABASE_PUBLISHABLE_KEY` |
-| `PUBLIC_BASE_URL` | Optional; only used if photos fall back to local disk |
 
 Do **not** set `VITE_API_URL` for the one-project setup. Leave it unset/blank so the frontend uses
 same-origin `/api`. The frontend can also load the public Supabase config from `GET /api/config` at
@@ -308,8 +289,7 @@ allowlist.
 | --- | --- |
 | React app | Vercel service `frontend` |
 | FastAPI | Vercel service `backend` (`backend/`) |
-| Profiles, routines, races, coins | Supabase Postgres |
-| Proof photos | Supabase Storage (`proofs` bucket, public) |
+| Profiles, routines, tasks, coins, ELO | Supabase Postgres |
 | Auth | Supabase Auth (email/password + Google) |
 
 ### Notes
@@ -317,13 +297,8 @@ allowlist.
 * The function limit for the FastAPI service is 60 seconds, set under `services.backend.functions`
   in the root `vercel.json`. `backend/.vercelignore` keeps local databases, uploads, and tests out
   of the backend build.
-* Vercel Functions cap request bodies at about 4.5 MB. The frontend resizes large photos to JPEG
-  before upload, and `MAX_UPLOAD_BYTES` keeps the API below the platform limit.
 * Supabase projects on the free plan pause after inactivity; the first request after a pause can be
   slow.
-* The API creates tables and syncs the shop catalogue on each cold start; both operations are
-  idempotent. Use the Session pooler so serverless instances do not exhaust Postgres connections.
-* Proof photos are public (same as the original local `/uploads` behaviour). If you need private
-  images, switch `public_url()` in `backend/app/services/storage.py` to signed URLs.
-* Rate-limit `/tasks/{id}/proof` and `/ranked/*/proof` at your reverse proxy — that's the only
-  expensive endpoint.
+* The API creates tables, adds new columns to existing tables, and syncs the shop catalogue on each
+  cold start; all operations are idempotent. Use the Session pooler so serverless instances do not
+  exhaust Postgres connections.

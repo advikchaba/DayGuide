@@ -73,8 +73,8 @@ export function OnboardingPage() {
     try {
       await api.post<Profile>('/me/username', { username })
       await refresh()
-      push(`@${username} is yours. Time to earn coins.`, 'success')
-      navigate('/app', { replace: true })
+      push(`@${username} is yours. Build your first timed routine.`, 'success')
+      navigate('/routines/new', { replace: true })
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'Could not claim that username.')
     } finally {

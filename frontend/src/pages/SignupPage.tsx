@@ -215,8 +215,8 @@ export function SignupPage() {
       </form>
 
       <p className="mt-4 text-[11px] leading-relaxed text-muted">
-        By signing up you get 100 welcome coins and a starter routine. Usernames are free to pick once — after that a
-        change costs 400 coins.
+        By signing up you get 100 welcome coins and a blank routine builder. Usernames are free to pick once — after
+        that a change costs 400 coins.
       </p>
 
       {mode === 'dev' ? (

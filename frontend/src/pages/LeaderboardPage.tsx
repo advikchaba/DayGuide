@@ -8,7 +8,6 @@ import { useAuth } from '../state/AuthContext'
 const METRICS = [
   { key: 'elo', label: 'ELO' },
   { key: 'coins', label: 'Coins' },
-  { key: 'matches_won', label: 'Race wins' },
   { key: 'streak', label: 'Best streak' },
 ] as const
 
@@ -44,8 +43,6 @@ export function LeaderboardPage() {
     switch (metric) {
       case 'coins':
         return `${entry.coins.toLocaleString()} coins`
-      case 'matches_won':
-        return `${entry.matches_won} wins`
       case 'streak':
         return `${entry.streak} day streak`
       default:
@@ -136,7 +133,7 @@ export function LeaderboardPage() {
                       {entry.is_you ? <span className="ml-2 text-xs text-muted">you</span> : null}
                     </p>
                     <p className="text-xs text-muted">
-                      {entry.elo} ELO · {entry.matches_won} wins · {entry.coins.toLocaleString()} coins
+                      {entry.elo} ELO · {entry.coins.toLocaleString()} coins
                     </p>
                   </div>
                   <div className="ml-auto flex items-center gap-3">
@@ -153,8 +150,8 @@ export function LeaderboardPage() {
           </Card>
 
           <p className="text-xs text-muted">
-            Ranked points come from perfect routines (+50 ELO) and race wins (+50 ELO). Photo verification is what keeps
-            the ladder honest.
+            Ranked points come from checking tasks in near their scheduled time. Inside 20 minutes earns +45 to +50 ELO;
+            further off costs -10 to -30 ELO.
           </p>
         </>
       )}

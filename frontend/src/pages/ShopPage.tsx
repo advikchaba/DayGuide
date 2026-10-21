@@ -216,10 +216,10 @@ export function ShopPage() {
       <Card className="text-sm text-muted">
         <p className="font-bold text-ink">How to earn coins</p>
         <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
-          <li>+10 coins per task you complete</li>
-          <li>+25 coins when a photo is verified (+10 bonus for clear proof)</li>
+          <li>Coins for every task checked in on time</li>
+          <li>Up to +50 ELO for accurate timing, down to -30 for missing the window</li>
           <li>+200 coins for a perfect routine, plus streak bonuses</li>
-          <li>+200 coins for winning a ranked race</li>
+          <li>Un-ticking a task reverses its coins and ELO</li>
         </ul>
       </Card>
 

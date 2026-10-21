@@ -95,6 +95,8 @@ class Task(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     requires_proof: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     coin_value: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    # Local wall-clock time the user planned to do this task ("HH:MM").
+    scheduled_time: Mapped[str] = mapped_column(String(5), default="09:00", nullable=False)
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     routine: Mapped[Routine] = relationship(back_populates="tasks")
@@ -111,6 +113,8 @@ class TaskCompletion(Base):
     source: Mapped[str] = mapped_column(String(16), default="manual", nullable=False)  # manual | proof
     coins_awarded: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     elo_awarded: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    on_time: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    time_delta_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     proof_id: Mapped[int | None] = mapped_column(ForeignKey("proofs.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 

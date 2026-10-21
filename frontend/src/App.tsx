@@ -8,7 +8,6 @@ import { LeaderboardPage } from './pages/LeaderboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ProfilePage } from './pages/ProfilePage'
-import { RankedPage } from './pages/RankedPage'
 import { RoutineBuilderPage } from './pages/RoutineBuilderPage'
 import { RoutinePage } from './pages/RoutinePage'
 import { ShopPage } from './pages/ShopPage'
@@ -61,7 +60,6 @@ export default function App() {
           <Route path="/app" element={<RoutinePage />} />
           <Route path="/dashboard" element={<Navigate to="/app" replace />} />
           <Route path="/routines/new" element={<RoutineBuilderPage />} />
-          <Route path="/ranked" element={<RankedPage />} />
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />

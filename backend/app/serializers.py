@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -14,12 +14,15 @@ from .services.storage import public_url
 # --------------------------------------------------------------------------- #
 # Routines
 # --------------------------------------------------------------------------- #
-def _today_proof_status(db: Session, task_ids: list[int], user_id: str) -> dict[int, str]:
+def _today_proof_status(
+    db: Session, task_ids: list[int], user_id: str, day: date | None = None
+) -> dict[int, str]:
     """Latest proof status per task for today (range filter = portable SQL)."""
     if not task_ids:
         return {}
 
-    start = datetime.combine(today(), time.min, tzinfo=timezone.utc)
+    day = day or today()
+    start = datetime.combine(day, time.min, tzinfo=timezone.utc)
     end = start + timedelta(days=1)
 
     rows = (
@@ -46,6 +49,7 @@ def serialize_task(task: Task, done_ids: set[int], proof_status: dict[int, str])
         "title": task.title,
         "note": task.note,
         "requires_proof": task.requires_proof,
+        "scheduled_time": task.scheduled_time or "09:00",
         "coin_value": task.coin_value,
         "position": task.position,
         "completed_today": task.id in done_ids,
@@ -53,17 +57,20 @@ def serialize_task(task: Task, done_ids: set[int], proof_status: dict[int, str])
     }
 
 
-def serialize_routine(db: Session, routine: Routine, user_id: str) -> dict:
-    done_ids = completed_task_ids(db, user_id)
+def serialize_routine(
+    db: Session, routine: Routine, user_id: str, day: date | None = None
+) -> dict:
+    day = day or today()
+    done_ids = completed_task_ids(db, user_id, day)
     task_ids = [task.id for task in routine.tasks]
-    statuses = _today_proof_status(db, task_ids, user_id)
-    progress = routine_progress(db, routine, user_id)
+    statuses = _today_proof_status(db, task_ids, user_id, day)
+    progress = routine_progress(db, routine, user_id, day)
     perfect = (
         db.query(PerfectDay)
         .filter(
             PerfectDay.user_id == user_id,
             PerfectDay.routine_id == routine.id,
-            PerfectDay.done_on == today(),
+            PerfectDay.done_on == day,
         )
         .one_or_none()
         is not None

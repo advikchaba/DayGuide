@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, CoinPill, Field, Modal, SectionTitle, Stat } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { getTheme } from '../lib/themes'
-import type { LedgerEntry, Profile, Proof } from '../lib/types'
+import type { LedgerEntry, Profile } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useTheme } from '../state/ThemeContext'
 import { useToast } from '../state/ToastContext'
@@ -14,7 +14,6 @@ export function ProfilePage() {
   const { push } = useToast()
 
   const [ledger, setLedger] = useState<LedgerEntry[]>([])
-  const [proofs, setProofs] = useState<Proof[]>([])
   const [usernameModal, setUsernameModal] = useState(false)
   const [newUsername, setNewUsername] = useState('')
   const [savingName, setSavingName] = useState(false)
@@ -22,12 +21,8 @@ export function ProfilePage() {
 
   const load = useCallback(async () => {
     try {
-      const [ledgerRows, proofRows] = await Promise.all([
-        api.get<LedgerEntry[]>('/me/ledger?limit=12'),
-        api.get<Proof[]>('/me/proofs?limit=9'),
-      ])
+      const ledgerRows = await api.get<LedgerEntry[]>('/me/ledger?limit=12')
       setLedger(ledgerRows)
-      setProofs(proofRows)
     } catch {
       /* non critical */
     }
@@ -131,7 +126,7 @@ export function ProfilePage() {
             <Stat label="Coins" value={profile.coins.toLocaleString()} />
             <Stat label="Perfect routines" value={profile.routines_completed} />
             <Stat label="Tasks done" value={profile.tasks_completed} />
-            <Stat label="Race wins" value={`${profile.matches_won}/${profile.matches_played}`} />
+            <Stat label="Best streak" value={`${profile.best_streak} days`} />
             <Stat label="Streak" value={`${profile.streak} days`} hint={`best ${profile.best_streak}`} />
           </div>
         </Card>
@@ -165,33 +160,13 @@ export function ProfilePage() {
         </Card>
 
         <Card>
-          <SectionTitle title="Your photo proofs" subtitle="Verification results for the things you claimed." />
-          <div className="grid grid-cols-3 gap-2">
-            {proofs.map((proof) => (
-              <figure key={proof.id} className="overflow-hidden rounded-lg">
-                <img src={proof.image_url} alt={proof.claimed} className="h-24 w-full object-cover" loading="lazy" />
-                <figcaption className="flex items-center justify-between gap-1 bg-surface-2 px-2 py-1.5 text-[10px] font-bold">
-                  <span
-                    className={
-                      proof.status === 'approved'
-                        ? 'text-emerald-300'
-                        : proof.status === 'rejected'
-                          ? 'text-rose-300'
-                          : 'text-amber-200'
-                    }
-                  >
-                    {proof.status}
-                  </span>
-                  <span className="text-muted">+{proof.coins_awarded} coins</span>
-                </figcaption>
-              </figure>
-            ))}
-            {proofs.length === 0 ? (
-              <p className="col-span-3 px-3 py-6 text-center text-sm text-muted">
-                No photos yet. Attach proof to a task to earn bonus coins.
-              </p>
-            ) : null}
-          </div>
+          <SectionTitle title="How ELO works" subtitle="Your check-in time is the score." />
+          <ul className="space-y-2 text-sm text-muted">
+            <li>Inside the 20 minute window: +45 to +50 ELO, scaled by accuracy.</li>
+            <li>More than 20 minutes off: -10 to -30 ELO, scaled by the gap.</li>
+            <li>On-time check-ins also earn coins. Late check-ins earn none.</li>
+            <li>Un-ticking a task reverses both its coins and its ELO.</li>
+          </ul>
         </Card>
       </div>
 

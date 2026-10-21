@@ -7,27 +7,27 @@ import { useTheme } from '../state/ThemeContext'
 const FEATURES = [
   {
     title: 'Build your routine',
-    body: 'Morning, gym, study or wind-down. Add tasks, mark the ones that need photo proof, and tick them off daily.',
+    body: 'Morning, gym, study or wind-down. Add tasks and give every one a time you plan to do it.',
   },
   {
-    title: 'Get paid in coins',
-    body: 'Every task pays coins. Finishing a whole routine perfectly pays 200 coins and +50 ELO, streaks pay bonuses.',
+    title: 'Check in on time',
+    body: 'Tick a task near its scheduled time to earn coins and +45 to +50 ELO, scaled by how accurate you were.',
+  },
+  {
+    title: 'Miss the window',
+    body: 'More than 20 minutes off costs -10 to -30 ELO, scaled by the gap. Late check-ins earn no coins.',
   },
   {
     title: 'Spend it on your profile',
     body: 'Colour themes from 10,000 coins, meme themes for 20,000, new profile pictures from 600. Look the part.',
   },
   {
-    title: 'Photo verified',
-    body: 'Snap the finished task and our verifier checks it really matches what you claimed. Cheating does not pay.',
-  },
-  {
-    title: 'Race real people',
-    body: 'Queue for a ranked race on the same checklist. First to get every item verified takes the ELO.',
+    title: 'Build a streak',
+    body: 'Finish every task inside its time window and the whole day is perfect, with 200 bonus coins.',
   },
   {
     title: 'Climb the ladder',
-    body: 'Every perfect routine and race win pushes you further up the global ladder. The ladder page holds your standing.',
+    body: 'Consistent timing pushes you up six tiers. The ladder page holds your rank and standing.',
   },
 ]
 
@@ -55,7 +55,7 @@ export function LandingPage() {
 
         {/* Hero */}
         <section className="mx-auto max-w-6xl px-4 pb-10 pt-2 text-center md:pt-6">
-          <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-muted">Routines, coins and a ranked ladder</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-muted">Routines, coins and a timing ladder</p>
 
           <div className="relative mx-auto mt-2 h-[320px] w-full max-w-2xl sm:h-[430px]">
             <CrystalizedBall
@@ -84,8 +84,8 @@ export function LandingPage() {
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-base text-muted sm:text-lg">
-            Build a checklist you actually finish. Earn coins for every task, unlock themes and profile pictures, and
-            race other players to the top of the ladder with photo proof for every claim.
+            Build a checklist you actually finish. Give every task a time, check in near that time to earn coins and ELO,
+            and climb the ladder through consistency.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -105,9 +105,9 @@ export function LandingPage() {
             <CoinPill coins={200} />
             <span>for every perfect routine</span>
             <span aria-hidden>·</span>
-            <span className="font-semibold">+50 ELO</span>
+            <span className="font-semibold">+45 to +50 ELO</span>
             <span aria-hidden>·</span>
-            <span>Photo proof on every claim</span>
+            <span>on-time check-ins</span>
           </div>
         </section>
 
@@ -130,13 +130,13 @@ export function LandingPage() {
         {/* How it works */}
         <section className="mx-auto max-w-6xl px-4 py-10">
           <div className="glass p-6 sm:p-9">
-            <h2 className="text-3xl sm:text-4xl">How a ranked race works</h2>
+            <h2 className="text-3xl sm:text-4xl">How the timing ladder works</h2>
             <ol className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { step: '01', title: 'Queue up', body: 'Pick the routine you want to race with and enter ranked.' },
-                { step: '02', title: 'Get matched', body: 'We pair you with an opponent close to your ELO.' },
-                { step: '03', title: 'Prove every task', body: 'Photo each item. The verifier accepts or rejects it.' },
-                { step: '04', title: 'Take the ELO', body: 'First to clear the list wins +50 ELO and 200 coins.' },
+                { step: '01', title: 'Build your routine', body: 'Add tasks and the exact time you plan to do each one.' },
+                { step: '02', title: 'Check in', body: 'Tap a task when you finish it. Your local time is compared with its schedule.' },
+                { step: '03', title: 'Earn or lose ELO', body: 'Inside 20 minutes earns +45 to +50. Further off deducts -10 to -30.' },
+                { step: '04', title: 'Climb the ladder', body: 'Keep every task on time for a perfect day and 200 bonus coins.' },
               ].map((item) => (
                 <li key={item.step} className="glass-2 p-4">
                   <span className="text-xs font-bold tracking-[0.24em] text-muted">{item.step}</span>
@@ -152,7 +152,7 @@ export function LandingPage() {
         <section className="mx-auto max-w-3xl px-4 pb-16 pt-6 text-center">
           <h2 className="text-3xl sm:text-4xl">Your routine is already happening. Get paid for it.</h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted">
-            Free to start, 100 welcome coins in your pocket, and a starter routine ready to go.
+            Free to start, 100 welcome coins in your pocket, and a blank routine builder waiting for your first task.
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link to="/signup" className="w-full sm:w-auto">

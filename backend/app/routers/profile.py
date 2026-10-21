@@ -8,7 +8,18 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_profile, profile_payload
 from ..config import settings
 from ..database import get_db
-from ..economy import USERNAME_CHANGE_COST, apply_rewards, rank_for
+from ..economy import (
+    COINS_PER_TASK,
+    LATE_ELO_MAX,
+    LATE_ELO_MIN,
+    ON_TIME_ELO_MAX,
+    ON_TIME_ELO_MIN,
+    ON_TIME_WINDOW_MINUTES,
+    PERFECT_ROUTINE_COINS,
+    USERNAME_CHANGE_COST,
+    apply_rewards,
+    rank_for,
+)
 from ..models import LedgerEntry, Profile, Proof, ShopItem
 from ..schemas import CosmeticRequest, LedgerOut, ProfileOut, UsernameRequest
 from ..serializers import serialize_proof
@@ -141,7 +152,6 @@ def read_config() -> dict:
         "supabase_anon_key": settings.supabase_public_key,
         "supabase_configured": settings.supabase_configured,
         "dev_auth": settings.dev_auth_enabled,
-        "vision_provider": settings.vision_provider,
         "ranks": [
             {
                 "name": rank.name,
@@ -154,12 +164,13 @@ def read_config() -> dict:
             for rank in (rank_for(elo) for elo in (100, 500, 800, 1200, 1600, 2000))
         ],
         "economics": {
-            "coins_per_task": 10,
-            "coins_per_verified_task": 25,
-            "perfect_routine_coins": 200,
-            "perfect_routine_elo": 50,
-            "ranked_win_coins": 200,
-            "ranked_win_elo": 50,
+            "coins_per_task": COINS_PER_TASK,
+            "perfect_routine_coins": PERFECT_ROUTINE_COINS,
+            "on_time_window_minutes": ON_TIME_WINDOW_MINUTES,
+            "on_time_elo_min": ON_TIME_ELO_MIN,
+            "on_time_elo_max": ON_TIME_ELO_MAX,
+            "late_elo_min": LATE_ELO_MIN,
+            "late_elo_max": LATE_ELO_MAX,
             "username_change_cost": USERNAME_CHANGE_COST,
         },
     }

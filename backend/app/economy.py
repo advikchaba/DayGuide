@@ -31,11 +31,19 @@ RANK_TIERS: tuple[tuple[str, int, int, str], ...] = (
 )
 
 # --- routine rewards -------------------------------------------------------
-COINS_PER_TASK = 10            # ticking a task by hand
-COINS_PER_VERIFIED_TASK = 25   # a photo was verified for this task
+COINS_PER_TASK = 10            # ticking a task on time
+COINS_PER_VERIFIED_TASK = 25   # legacy photo reward (kept for dormant proof code)
 PROOF_QUALITY_BONUS = 10       # extra coins when the model is very confident
 PERFECT_ROUTINE_COINS = 200    # "200 coins every time they follow their routine perfectly"
-PERFECT_ROUTINE_ELO = 50       # "about 50 ELO each time they finish their routine perfectly"
+PERFECT_ROUTINE_ELO = 0        # ELO is now awarded per task by timing accuracy
+
+# --- timing rewards --------------------------------------------------------
+ON_TIME_WINDOW_MINUTES = 20    # inside this window a check-in is "on time"
+ON_TIME_ELO_MAX = 50           # exact timing
+ON_TIME_ELO_MIN = 45           # 20 minutes off
+LATE_ELO_MIN = 10              # just outside the window
+LATE_ELO_MAX = 30              # 120+ minutes off
+LATE_PENALTY_RAMP_MINUTES = 100  # minutes from 20 -> 120 to reach the max penalty
 
 # --- ranked rewards --------------------------------------------------------
 RANKED_WIN_ELO = 50
@@ -93,6 +101,52 @@ def today() -> date:
 
 
 # --------------------------------------------------------------------------- #
+# Timing
+# --------------------------------------------------------------------------- #
+def parse_hhmm(value: str | None) -> int | None:
+    """Return minutes since midnight for a ``HH:MM`` string, or None."""
+    if not value:
+        return None
+    try:
+        hours_text, minutes_text = value.strip().split(":")
+        hours, minutes = int(hours_text), int(minutes_text)
+    except (AttributeError, ValueError):
+        return None
+    if 0 <= hours <= 23 and 0 <= minutes <= 59:
+        return hours * 60 + minutes
+    return None
+
+
+def time_difference_minutes(scheduled: str | None, actual: str | None) -> int:
+    """Shortest distance between two wall-clock times (handles midnight)."""
+    scheduled_minutes = parse_hhmm(scheduled)
+    actual_minutes = parse_hhmm(actual)
+    if scheduled_minutes is None or actual_minutes is None:
+        return 0
+    difference = abs(scheduled_minutes - actual_minutes)
+    return min(difference, 24 * 60 - difference)
+
+
+def timing_reward(scheduled: str | None, actual: str | None) -> tuple[bool, int, int]:
+    """Score a check-in against its scheduled time.
+
+    Returns ``(on_time, difference_minutes, elo_delta)``.
+    Inside the 20 minute window the reward is +50 down to +45 ELO. Outside it
+    the penalty is -10 down to -30 ELO as the gap grows to two hours.
+    """
+    difference = time_difference_minutes(scheduled, actual)
+    if difference <= ON_TIME_WINDOW_MINUTES:
+        span = ON_TIME_ELO_MAX - ON_TIME_ELO_MIN
+        gain = round(ON_TIME_ELO_MAX - span * (difference / ON_TIME_WINDOW_MINUTES))
+        return True, difference, max(ON_TIME_ELO_MIN, gain)
+
+    over = difference - ON_TIME_WINDOW_MINUTES
+    ratio = min(over / LATE_PENALTY_RAMP_MINUTES, 1.0)
+    penalty = round(LATE_ELO_MIN + (LATE_ELO_MAX - LATE_ELO_MIN) * ratio)
+    return False, difference, -penalty
+
+
+# --------------------------------------------------------------------------- #
 # Ledger + profile mutation helpers
 # --------------------------------------------------------------------------- #
 def apply_rewards(
@@ -102,14 +156,33 @@ def apply_rewards(
     coins: int = 0,
     elo: int = 0,
     reason: str,
-) -> None:
-    """Move coins/ELO on a profile and write the matching ledger entry."""
+) -> tuple[int, int]:
+    """Move coins/ELO on a profile and write the matching ledger entry.
+
+    Returns the deltas that were actually applied. Both values are clamped
+    (coins at zero, ELO to the published floor/ceiling), so callers that need
+    to reverse a reward later must store these values rather than the request.
+    """
+    coins_before = profile.coins
+    elo_before = profile.elo
+
     if coins:
         profile.coins = max(0, profile.coins + coins)
     if elo:
         profile.elo = clamp_elo(profile.elo + elo)
-    if coins or elo:
-        db.add(LedgerEntry(user_id=profile.id, delta=coins, elo_delta=elo, reason=reason))
+
+    applied_coins = profile.coins - coins_before
+    applied_elo = profile.elo - elo_before
+    if applied_coins or applied_elo:
+        db.add(
+            LedgerEntry(
+                user_id=profile.id,
+                delta=applied_coins,
+                elo_delta=applied_elo,
+                reason=reason,
+            )
+        )
+    return applied_coins, applied_elo
 
 
 def lock_profile(db: Session, user_id: str) -> Profile | None:
@@ -133,6 +206,9 @@ class DayReward:
     streak: int = 0
     rank_name: str = ""
     rank_progress: float = 0.0
+    on_time: bool = True
+    time_delta_minutes: int = 0
+    scheduled_time: str | None = None
     messages: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict:
@@ -146,6 +222,9 @@ class DayReward:
             "streak": self.streak,
             "rank_name": self.rank_name,
             "rank_progress": self.rank_progress,
+            "on_time": self.on_time,
+            "time_delta_minutes": self.time_delta_minutes,
+            "scheduled_time": self.scheduled_time,
             "messages": self.messages,
         }
 
@@ -162,6 +241,21 @@ def _count_completed(db: Session, routine_id: int, user_id: str, day: date) -> i
         .join(Task, Task.id == TaskCompletion.task_id)
         .filter(Task.routine_id == routine_id)
         .filter(TaskCompletion.user_id == user_id, TaskCompletion.done_on == day)
+        .scalar()
+        or 0
+    )
+
+
+def _count_on_time(db: Session, routine_id: int, user_id: str, day: date) -> int:
+    return (
+        db.query(func.count(TaskCompletion.id))
+        .join(Task, Task.id == TaskCompletion.task_id)
+        .filter(Task.routine_id == routine_id)
+        .filter(
+            TaskCompletion.user_id == user_id,
+            TaskCompletion.done_on == day,
+            TaskCompletion.on_time.is_(True),
+        )
         .scalar()
         or 0
     )
@@ -205,9 +299,10 @@ def evaluate_perfect_day(
 
     total = _count_tasks(db, routine.id)
     done = _count_completed(db, routine.id, profile.id, day)
+    on_time = _count_on_time(db, routine.id, profile.id, day)
 
     reward.streak = profile.streak
-    if total == 0 or done < total:
+    if total == 0 or done < total or on_time < total:
         rank = rank_for(profile.elo)
         reward.rank_name, reward.rank_progress = rank.name, rank.progress
         return reward
@@ -263,7 +358,7 @@ def evaluate_perfect_day(
     reward.streak = profile.streak
     reward.rank_name = rank.name
     reward.rank_progress = rank.progress
-    reward.messages.append(f"Perfect routine! +{coins} coins, +{elo} ELO")
+    reward.messages.append(f"Perfect routine! +{coins} coins")
     if streak_bonus:
         reward.messages.append(f"{profile.streak} day streak: +{streak_bonus} bonus coins")
     return reward
@@ -274,8 +369,11 @@ def revoke_perfect_day(
     profile: Profile,
     routine: Routine,
     day: date | None = None,
-) -> int:
-    """Undo a perfect-day payout (used when a task is unchecked the same day)."""
+) -> tuple[int, int]:
+    """Undo a perfect-day payout (used when a task is unchecked the same day).
+
+    Returns the ``(coins, elo)`` that were reversed.
+    """
     day = day or today()
     row = (
         db.query(PerfectDay)
@@ -287,16 +385,17 @@ def revoke_perfect_day(
         .one_or_none()
     )
     if not row:
-        return 0
+        return 0, 0
 
     coins = row.coins_awarded
-    apply_rewards(
+    elo = row.elo_awarded
+    applied_coins, applied_elo = apply_rewards(
         db,
         profile,
         coins=-coins,
-        elo=-PERFECT_ROUTINE_ELO,
+        elo=-elo,
         reason=f"Routine bonus reverted: {routine.name}",
     )
     profile.routines_completed = max(0, (profile.routines_completed or 0) - 1)
     db.delete(row)
-    return coins
+    return -applied_coins, -applied_elo

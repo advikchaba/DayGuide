@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -88,6 +88,7 @@ class TaskIn(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     note: str | None = Field(default=None, max_length=400)
     requires_proof: bool = False
+    scheduled_time: str = Field(default="09:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     coin_value: int = Field(default=10, ge=0, le=200)
 
 
@@ -96,6 +97,7 @@ class TaskOut(BaseModel):
     title: str
     note: str | None
     requires_proof: bool
+    scheduled_time: str
     coin_value: int
     position: int
     completed_today: bool = False
@@ -138,6 +140,20 @@ class RewardOut(BaseModel):
     messages: list[str]
     new_balance: int = 0
     new_elo: int = 0
+    on_time: bool = True
+    time_delta_minutes: int = 0
+    scheduled_time: str | None = None
+
+
+class CompletionIn(BaseModel):
+    """The user's local clock, supplied by the browser.
+
+    Scheduled times are wall-clock times in the user's timezone, so the server
+    cannot compare them against UTC without this hint.
+    """
+
+    local_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    local_date: date | None = None
 
 
 class TaskCompleteOut(BaseModel):

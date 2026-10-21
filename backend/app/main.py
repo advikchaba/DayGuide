@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .database import SessionLocal, create_all
-from .routers import auth_dev, leaderboard, profile, ranked, routines, shop
+from .routers import auth_dev, leaderboard, profile, routines, shop
 from .seed import run_seed
 from .services.storage import uploads_root
 
@@ -30,10 +30,9 @@ async def lifespan(_app: FastAPI):
     with SessionLocal() as db:
         run_seed(db)
     logger.info(
-        "Routinery API ready | env=%s | db=%s | vision=%s | supabase=%s | storage=%s",
+        "Routinery API ready | env=%s | db=%s | supabase=%s | storage=%s",
         settings.environment,
         settings.database_url.split("://")[0],
-        settings.vision_provider,
         "configured" if settings.supabase_configured else "dev-auth",
         "supabase" if settings.supabase_storage_configured else "local",
     )
@@ -43,7 +42,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
-    description="Routine checklists, coins, cosmetics and ELO ranked races with photo verification.",
+    description="Timed routine checklists, coins, cosmetics and an ELO ladder.",
     lifespan=lifespan,
 )
 
@@ -69,7 +68,6 @@ for router in (
     profile.router,
     routines.router,
     shop.router,
-    ranked.router,
     leaderboard.router,
 ):
     app.include_router(router, prefix=settings.api_prefix)
@@ -82,7 +80,6 @@ def health() -> dict:
         "app": settings.app_name,
         "environment": settings.environment,
         "auth": "supabase" if settings.supabase_configured else "dev",
-        "vision": settings.vision_provider,
         "storage": "supabase" if settings.supabase_storage_configured else "local",
     }
 

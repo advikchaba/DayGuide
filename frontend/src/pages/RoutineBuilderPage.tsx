@@ -3,20 +3,53 @@ import { useNavigate } from 'react-router-dom'
 import { Badge, Button, Card, Field, SectionTitle } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import type { Routine } from '../lib/types'
+import { nextSlot } from '../lib/time'
 import { useToast } from '../state/ToastContext'
 
 interface DraftTask {
   key: number
   title: string
-  requires_proof: boolean
+  scheduled_time: string
   coin_value: number
 }
 
-const TEMPLATES: { name: string; tasks: string[] }[] = [
-  { name: 'Morning Routine', tasks: ['Wake up on time', 'Drink a glass of water', 'Make the bed', 'Stretch for 5 minutes'] },
-  { name: 'Gym Day', tasks: ['Warm up 10 minutes', 'Complete the workout', 'Cool down and stretch', 'Log the session'] },
-  { name: 'Deep Study', tasks: ['Phone in another room', 'Study block 1 (45 min)', 'Study block 2 (45 min)', 'Review notes'] },
-  { name: 'Wind Down', tasks: ['No screens after 22:00', 'Tidy the desk', 'Read 10 pages', 'Lights out by 23:00'] },
+const TEMPLATES: { name: string; tasks: { title: string; time: string }[] }[] = [
+  {
+    name: 'Morning Routine',
+    tasks: [
+      { title: 'Wake up on time', time: '06:30' },
+      { title: 'Drink a glass of water', time: '06:40' },
+      { title: 'Make the bed', time: '06:50' },
+      { title: 'Stretch for 5 minutes', time: '07:00' },
+    ],
+  },
+  {
+    name: 'Gym Day',
+    tasks: [
+      { title: 'Warm up 10 minutes', time: '17:30' },
+      { title: 'Complete the workout', time: '17:40' },
+      { title: 'Cool down and stretch', time: '18:20' },
+      { title: 'Log the session', time: '18:30' },
+    ],
+  },
+  {
+    name: 'Deep Study',
+    tasks: [
+      { title: 'Phone in another room', time: '19:00' },
+      { title: 'Study block 1 (45 min)', time: '19:10' },
+      { title: 'Study block 2 (45 min)', time: '20:00' },
+      { title: 'Review notes', time: '20:50' },
+    ],
+  },
+  {
+    name: 'Wind Down',
+    tasks: [
+      { title: 'No screens after 22:00', time: '21:30' },
+      { title: 'Tidy the desk', time: '21:45' },
+      { title: 'Read 10 pages', time: '22:00' },
+      { title: 'Lights out by 23:00', time: '22:30' },
+    ],
+  },
 ]
 
 let keySeed = 1
@@ -27,7 +60,7 @@ export function RoutineBuilderPage() {
 
   const [name, setName] = useState('My Routine')
   const [tasks, setTasks] = useState<DraftTask[]>([
-    { key: keySeed++, title: '', requires_proof: false, coin_value: 10 },
+    { key: keySeed++, title: '', scheduled_time: nextSlot(), coin_value: 10 },
   ])
   const [saving, setSaving] = useState(false)
 
@@ -35,14 +68,25 @@ export function RoutineBuilderPage() {
     setTasks((current) => current.map((task) => (task.key === key ? { ...task, ...patch } : task)))
   }
 
-  const addTask = () => setTasks((current) => [...current, { key: keySeed++, title: '', requires_proof: false, coin_value: 10 }])
+  const addTask = () =>
+    setTasks((current) => [
+      ...current,
+      { key: keySeed++, title: '', scheduled_time: nextSlot(current.length * 30), coin_value: 10 },
+    ])
 
   const removeTask = (key: number) => setTasks((current) => current.filter((task) => task.key !== key))
 
   const applyTemplate = (index: number) => {
     const template = TEMPLATES[index]
     setName(template.name)
-    setTasks(template.tasks.map((title) => ({ key: keySeed++, title, requires_proof: false, coin_value: 10 })))
+    setTasks(
+      template.tasks.map((task) => ({
+        key: keySeed++,
+        title: task.title,
+        scheduled_time: task.time,
+        coin_value: 10,
+      })),
+    )
   }
 
   const totalCoins = tasks.reduce((sum, task) => (task.title.trim() ? sum + task.coin_value : sum), 0)
@@ -67,11 +111,11 @@ export function RoutineBuilderPage() {
         emoji: '',
         tasks: cleaned.map((task) => ({
           title: task.title.trim(),
-          requires_proof: task.requires_proof,
+          scheduled_time: task.scheduled_time,
           coin_value: task.coin_value,
         })),
       })
-      push('Routine created. Go finish it.', 'success')
+      push('Routine created. Check tasks in at their scheduled times.', 'success')
       navigate('/app')
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not save that routine.', 'error')
@@ -84,7 +128,7 @@ export function RoutineBuilderPage() {
     <form onSubmit={handleSubmit} className="space-y-6">
       <SectionTitle
         title="Build a routine"
-        subtitle="Tasks you do every day. Mark the ones that need photo proof for bigger rewards."
+        subtitle="Give every task a time. Checking in near that time earns coins and ELO; missing it costs ELO."
         action={
           <Button variant="ghost" type="button" onClick={() => navigate(-1)}>
             Cancel
@@ -108,7 +152,10 @@ export function RoutineBuilderPage() {
       </Card>
 
       <Card>
-        <SectionTitle title="Tasks" subtitle={`${tasks.filter((t) => t.title.trim()).length} task(s) · ${totalCoins} coins per full day`} />
+        <SectionTitle
+          title="Tasks and times"
+          subtitle={`${tasks.filter((t) => t.title.trim()).length} task(s) · ${totalCoins} coins per fully on-time day`}
+        />
 
         <ul className="space-y-3">
           {tasks.map((task, index) => (
@@ -125,14 +172,15 @@ export function RoutineBuilderPage() {
                 className="focus-ring min-w-[180px] flex-1 rounded-lg bg-surface-2 px-3 py-2 text-sm"
               />
 
-              <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-muted">
+              <label className="flex items-center gap-2 text-xs font-bold text-muted">
+                Time
                 <input
-                  type="checkbox"
-                  checked={task.requires_proof}
-                  onChange={(event) => updateTask(task.key, { requires_proof: event.target.checked })}
-                  className="h-4 w-4 accent-[var(--accent)]"
+                  type="time"
+                  value={task.scheduled_time}
+                  onChange={(event) => updateTask(task.key, { scheduled_time: event.target.value })}
+                  required
+                  className="focus-ring rounded-md bg-surface-2 px-2 py-1.5 text-xs"
                 />
-                Proof
               </label>
 
               <label className="flex items-center gap-2 text-xs font-bold text-muted">
@@ -167,8 +215,9 @@ export function RoutineBuilderPage() {
           <Button type="button" variant="secondary" onClick={addTask}>
             Add task
           </Button>
-          <div className="flex items-center gap-2">
-            <Badge tone="gold">Perfect day bonus: +200 coins and +50 ELO</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="gold">Perfect day: +200 coins</Badge>
+            <Badge tone="neutral">ELO is scored per task by timing</Badge>
           </div>
         </div>
       </Card>

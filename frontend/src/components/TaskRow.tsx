@@ -1,37 +1,14 @@
-import { useRef, useState } from 'react'
-import { Badge, Button } from './ui'
+import { Badge } from './ui'
 import type { Task } from '../lib/types'
+import { formatTime } from '../lib/time'
 
 interface TaskRowProps {
   task: Task
   busy: boolean
   onToggle: (task: Task) => void
-  onProof: (task: Task, file: File) => Promise<void>
 }
 
-const PROOF_BADGES: Record<string, { tone: 'success' | 'danger' | 'gold'; label: string }> = {
-  approved: { tone: 'success', label: 'photo verified' },
-  rejected: { tone: 'danger', label: 'photo rejected' },
-  pending: { tone: 'gold', label: 'photo in review' },
-}
-
-export function TaskRow({ task, busy, onToggle, onProof }: TaskRowProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
-  const proofBadge = task.proof_status ? PROOF_BADGES[task.proof_status] : undefined
-
-  const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    setUploading(true)
-    try {
-      await onProof(task, file)
-    } finally {
-      setUploading(false)
-    }
-  }
-
+export function TaskRow({ task, busy, onToggle }: TaskRowProps) {
   return (
     <li
       className={[
@@ -42,7 +19,7 @@ export function TaskRow({ task, busy, onToggle, onProof }: TaskRowProps) {
       <button
         type="button"
         onClick={() => onToggle(task)}
-        disabled={busy || uploading}
+        disabled={busy}
         aria-pressed={task.completed_today}
         aria-label={task.completed_today ? `Mark ${task.title} as not done` : `Mark ${task.title} as done`}
         className={[
@@ -64,22 +41,10 @@ export function TaskRow({ task, busy, onToggle, onProof }: TaskRowProps) {
         {task.note ? <p className="mt-0.5 text-xs text-muted">{task.note}</p> : null}
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge tone="gold">+{task.coin_value} coins</Badge>
-          {task.requires_proof ? <Badge tone="accent">Proof required</Badge> : null}
-          {proofBadge ? <Badge tone={proofBadge.tone}>{proofBadge.label}</Badge> : null}
+          <Badge tone="accent">Scheduled {formatTime(task.scheduled_time)}</Badge>
+          <Badge tone="gold">+{task.coin_value} coins on time</Badge>
+          {task.completed_today ? <Badge tone="success">Checked in today</Badge> : null}
         </div>
-      </div>
-
-      <div className="shrink-0">
-        <Button
-          variant={task.requires_proof && !task.completed_today ? 'primary' : 'secondary'}
-          size="sm"
-          loading={uploading}
-          onClick={() => inputRef.current?.click()}
-        >
-          {task.proof_status === 'rejected' ? 'Retry photo' : 'Add photo'}
-        </Button>
-        <input ref={inputRef} type="file" accept="image/*" capture="environment" hidden onChange={handleFile} />
       </div>
     </li>
   )

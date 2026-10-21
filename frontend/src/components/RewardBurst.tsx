@@ -2,7 +2,7 @@ import { Modal } from './ui'
 import type { Reward } from '../lib/types'
 
 /**
- * The celebration shown after a task, a perfect routine or a ranked win.
+ * The celebration shown after a perfect routine or a reward reversal.
  */
 export function RewardBurst({
   reward,
@@ -18,7 +18,7 @@ export function RewardBurst({
   if (!reward) return null
 
   const isPerfect = reward.perfect
-  const isNegative = reward.coins < 0
+  const isNegative = reward.coins < 0 || reward.elo < 0
 
   return (
     <Modal open={open} onClose={onClose} width="max-w-md">
@@ -29,9 +29,9 @@ export function RewardBurst({
         </h3>
         <p className="mt-1 text-sm text-muted">
           {isPerfect
-            ? 'Every task in your routine is done. That is how the ladder is climbed.'
+            ? 'Every task landed inside its time window. That is how the ladder is climbed.'
             : isNegative
-              ? 'Un-ticking a task takes its coins back, so the economy stays honest.'
+              ? 'Un-ticking a task takes its coins and ELO back, so the economy stays honest.'
               : 'Nice. Keep the streak alive.'}
         </p>
 
@@ -57,6 +57,13 @@ export function RewardBurst({
             </span>
           ) : null}
         </div>
+
+        {reward.scheduled_time ? (
+          <p className="mb-3 text-xs text-muted">
+            Scheduled {reward.scheduled_time}
+            {reward.time_delta_minutes ? ` · ${reward.time_delta_minutes} minutes off` : ' · right on time'}
+          </p>
+        ) : null}
 
         {reward.messages.length > 0 ? (
           <ul className="mb-4 space-y-1 text-xs text-muted">

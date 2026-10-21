@@ -25,15 +25,15 @@ export function AuthShell({
           <div className="relative z-10 max-w-md">
             <h1 className="text-5xl leading-[1.05]">Turn your daily routine into competitiveness</h1>
             <p className="mt-4 text-sm text-muted">
-              Tick off your checklist, earn coins for every task, unlock themes and profile pictures, then race other
-              players up the global ladder.
+              Build a timed checklist, check tasks in when you do them, and earn coins and ELO for staying close to
+              your schedule.
             </p>
 
             <ul className="mt-8 space-y-4 text-sm">
               {[
-                '+200 coins for a perfect routine, +50 ELO',
-                'Photo verification keeps the ladder honest',
-                'Ranked races: first to finish takes the ELO',
+                'Timed tasks with +45 to +50 ELO for accurate check-ins',
+                'More than 20 minutes off costs -10 to -30 ELO',
+                '+200 coins for a perfect, fully on-time day',
               ].map((text, index) => (
                 <li key={text} className="flex gap-3">
                   <span className="text-xs font-bold tracking-[0.2em] text-muted">{String(index + 1).padStart(2, '0')}</span>

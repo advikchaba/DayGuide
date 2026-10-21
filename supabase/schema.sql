@@ -46,6 +46,7 @@ create table if not exists tasks (
   note           text,
   requires_proof boolean not null default false,
   coin_value     integer not null default 10,
+  scheduled_time varchar(5) not null default '09:00',
   position       integer not null default 0
 );
 create index if not exists ix_tasks_routine on tasks (routine_id);
@@ -77,6 +78,8 @@ create table if not exists task_completions (
   source        varchar(16) not null default 'manual',
   coins_awarded integer not null default 0,
   elo_awarded   integer not null default 0,
+  on_time       boolean not null default true,
+  time_delta_minutes integer not null default 0,
   proof_id      integer references proofs(id) on delete set null,
   created_at    timestamptz not null default now(),
   constraint uq_task_user_day unique (task_id, user_id, done_on)

@@ -7,7 +7,6 @@ import { Logo } from './Logo'
 
 const LINKS = [
   { to: '/app', label: 'Routine' },
-  { to: '/ranked', label: 'Ranked' },
   { to: '/shop', label: 'Shop' },
   { to: '/leaderboard', label: 'Ladder' },
   { to: '/profile', label: 'Profile' },
@@ -105,7 +104,7 @@ export function AppLayout() {
         </main>
 
         <footer className="mx-auto max-w-6xl px-4 py-8 text-xs text-muted">
-          Routinery · Routines, coins, cosmetics and a ranked ladder. Theme: {theme.name}
+          Routinery · Routines, coins, cosmetics and a timing ladder. Theme: {theme.name}
         </footer>
       </div>
     </div>

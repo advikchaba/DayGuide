@@ -1,35 +1,27 @@
-"""Routine + task endpoints: the daily checklist and its rewards."""
+"""Routine + task endpoints: the daily checklist and its timing rewards."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from datetime import date, datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_profile
 from ..database import get_db
 from ..economy import (
     COINS_PER_TASK,
-    PERFECT_ROUTINE_COINS,
-    PERFECT_ROUTINE_ELO,
+    DayReward,
     apply_rewards,
-    completed_task_ids,
     evaluate_perfect_day,
+    rank_for,
     revoke_perfect_day,
-    routine_progress,
+    timing_reward,
     today,
 )
-from ..models import Profile, Proof, Routine, Task, TaskCompletion
-from ..schemas import (
-    ProofVerificationOut,
-    RoutineIn,
-    RoutineUpdate,
-    TaskCompleteOut,
-    TaskIn,
-)
-from ..serializers import serialize_proof, serialize_routine
-from ..services.proofs import finalize_proof
-from ..services.storage import save_proof_image
-from ..services.vision import verify_photo
+from ..models import Profile, Routine, Task, TaskCompletion
+from ..schemas import CompletionIn, RoutineIn, RoutineUpdate, TaskCompleteOut, TaskIn
+from ..serializers import serialize_routine
 
 router = APIRouter(tags=["routines"])
 
@@ -61,11 +53,17 @@ def _own_task(db: Session, task_id: int, user_id: str) -> tuple[Task, Routine]:
     return task, routine
 
 
-def _reward_payload(reward, profile: Profile) -> dict:
+def _reward_payload(reward: DayReward, profile: Profile) -> dict:
     payload = reward.as_dict()
     payload["new_balance"] = profile.coins
     payload["new_elo"] = profile.elo
     return payload
+
+
+def _local_time(payload: CompletionIn | None) -> str:
+    if payload and payload.local_time:
+        return payload.local_time
+    return datetime.now(timezone.utc).strftime("%H:%M")
 
 
 # --------------------------------------------------------------------------- #
@@ -73,6 +71,7 @@ def _reward_payload(reward, profile: Profile) -> dict:
 # --------------------------------------------------------------------------- #
 @router.get("/routines")
 def list_routines(
+    local_date: date | None = Query(default=None),
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> list[dict]:
@@ -82,7 +81,8 @@ def list_routines(
         .order_by(Routine.created_at.asc())
         .all()
     )
-    return [serialize_routine(db, routine, profile.id) for routine in routines]
+    day = local_date or today()
+    return [serialize_routine(db, routine, profile.id, day) for routine in routines]
 
 
 @router.post("/routines", status_code=status.HTTP_201_CREATED)
@@ -104,7 +104,8 @@ def create_routine(
                 routine_id=routine.id,
                 title=task.title.strip(),
                 note=task.note,
-                requires_proof=task.requires_proof,
+                requires_proof=False,
+                scheduled_time=task.scheduled_time,
                 coin_value=task.coin_value,
                 position=position,
             )
@@ -150,6 +151,7 @@ def delete_routine(
 def add_task(
     routine_id: int,
     payload: TaskIn,
+    local_date: date | None = Query(default=None),
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -160,14 +162,16 @@ def add_task(
             routine_id=routine.id,
             title=payload.title.strip(),
             note=payload.note,
-            requires_proof=payload.requires_proof,
+            requires_proof=False,
+            scheduled_time=payload.scheduled_time,
             coin_value=payload.coin_value,
             position=position,
         )
     )
     db.commit()
     db.refresh(routine)
-    return serialize_routine(db, routine, profile.id)
+    day = local_date or today()
+    return serialize_routine(db, routine, profile.id, day)
 
 
 @router.patch("/tasks/{task_id}")
@@ -180,7 +184,8 @@ def update_task(
     task, routine = _own_task(db, task_id, profile.id)
     task.title = payload.title.strip()
     task.note = payload.note
-    task.requires_proof = payload.requires_proof
+    task.requires_proof = False
+    task.scheduled_time = payload.scheduled_time
     task.coin_value = payload.coin_value
     db.commit()
     db.refresh(routine)
@@ -205,11 +210,13 @@ def delete_task(
 @router.post("/tasks/{task_id}/complete", response_model=TaskCompleteOut)
 def complete_task(
     task_id: int,
+    payload: CompletionIn | None = None,
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
     task, routine = _own_task(db, task_id, profile.id)
-    day = today()
+    day = (payload.local_date if payload else None) or today()
+    scheduled_time = task.scheduled_time or "09:00"
 
     existing = (
         db.query(TaskCompletion)
@@ -221,33 +228,65 @@ def complete_task(
         .one_or_none()
     )
 
-    reward = None
     if not existing:
-        coins = max(COINS_PER_TASK, task.coin_value)
+        actual_time = _local_time(payload)
+        on_time, difference, elo = timing_reward(scheduled_time, actual_time)
+        coins = max(COINS_PER_TASK, task.coin_value) if on_time else 0
+
+        profile.tasks_completed = (profile.tasks_completed or 0) + 1
+        reason = (
+            f"Task on time: {task.title}"
+            if on_time
+            else f"Task off schedule ({difference} min): {task.title}"
+        )
+        applied_coins, applied_elo = apply_rewards(
+            db, profile, coins=coins, elo=elo, reason=reason
+        )
+
         db.add(
             TaskCompletion(
                 task_id=task.id,
                 user_id=profile.id,
                 done_on=day,
                 source="manual",
-                coins_awarded=coins,
+                coins_awarded=applied_coins,
+                elo_awarded=applied_elo,
+                on_time=on_time,
+                time_delta_minutes=difference,
             )
         )
-        profile.tasks_completed = (profile.tasks_completed or 0) + 1
-        apply_rewards(db, profile, coins=coins, reason=f"Task complete: {task.title}")
-        reward = evaluate_perfect_day(db, profile, routine)
-        reward.base_coins = coins
+
+        reward = evaluate_perfect_day(db, profile, routine, day)
+        reward.base_coins = applied_coins
+        reward.coins += applied_coins
+        reward.elo += applied_elo
+        reward.on_time = on_time
+        reward.time_delta_minutes = difference
+        reward.scheduled_time = scheduled_time
+        if on_time:
+            message = f"On time ({difference} min off): +{applied_coins} coins, +{applied_elo} ELO"
+            if applied_elo < elo:
+                message += " (ELO ceiling reached)"
+        else:
+            message = f"{difference} min off schedule: {applied_elo} ELO, no coins"
+            if applied_elo > elo:
+                message += " (ELO floor reached)"
+        reward.messages.insert(0, message)
         db.commit()
         db.refresh(profile)
     else:
-        reward = evaluate_perfect_day(db, profile, routine)
+        reward = evaluate_perfect_day(db, profile, routine, day)
+        reward.on_time = existing.on_time
+        reward.time_delta_minutes = existing.time_delta_minutes
+        reward.scheduled_time = scheduled_time
+        reward.messages.insert(0, "Already ticked for this day.")
         db.commit()
 
     db.refresh(routine)
     return {
         "task_id": task.id,
         "completed": True,
-        "routine": serialize_routine(db, routine, profile.id),
+        "routine": serialize_routine(db, routine, profile.id, day),
         "reward": _reward_payload(reward, profile),
     }
 
@@ -255,14 +294,13 @@ def complete_task(
 @router.delete("/tasks/{task_id}/complete", response_model=TaskCompleteOut)
 def uncomplete_task(
     task_id: int,
+    local_date: date | None = Query(default=None),
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Un-tick a task: reverses the coins it granted (anti-farming)."""
-    from ..economy import DayReward, rank_for
-
+    """Un-tick a task: reverses both the coins and the ELO it granted."""
     task, routine = _own_task(db, task_id, profile.id)
-    day = today()
+    day = local_date or today()
 
     existing = (
         db.query(TaskCompletion)
@@ -274,81 +312,46 @@ def uncomplete_task(
         .one_or_none()
     )
 
-    reverted = 0
+    reverted_coins = 0
+    reverted_elo = 0
     if existing:
-        reverted += existing.coins_awarded
-        apply_rewards(db, profile, coins=-existing.coins_awarded, reason=f"Task unchecked: {task.title}")
+        applied_coins, applied_elo = apply_rewards(
+            db,
+            profile,
+            coins=-existing.coins_awarded,
+            elo=-existing.elo_awarded,
+            reason=f"Task unchecked: {task.title}",
+        )
+        reverted_coins -= applied_coins
+        reverted_elo -= applied_elo
         profile.tasks_completed = max(0, (profile.tasks_completed or 0) - 1)
         db.delete(existing)
         db.flush()
 
-    reverted += revoke_perfect_day(db, profile, routine)
+    perfect_coins, perfect_elo = revoke_perfect_day(db, profile, routine, day)
+    reverted_coins += perfect_coins
+    reverted_elo += perfect_elo
     db.commit()
     db.refresh(profile)
     db.refresh(routine)
 
     rank = rank_for(profile.elo)
     reward = DayReward(
-        coins=-reverted,
+        coins=-reverted_coins,
+        elo=-reverted_elo,
         streak=profile.streak,
         rank_name=rank.name,
         rank_progress=rank.progress,
+        scheduled_time=task.scheduled_time or "09:00",
+        messages=[
+            "Task unchecked - its coins and ELO were reversed."
+            if existing
+            else "Task was not ticked for this day."
+        ],
     )
     return {
         "task_id": task.id,
         "completed": False,
-        "routine": serialize_routine(db, routine, profile.id),
+        "routine": serialize_routine(db, routine, profile.id, day),
         "reward": _reward_payload(reward, profile),
-    }
-
-
-# --------------------------------------------------------------------------- #
-# Photo proof for a routine task
-# --------------------------------------------------------------------------- #
-@router.post("/tasks/{task_id}/proof", response_model=ProofVerificationOut)
-async def submit_task_proof(
-    task_id: int,
-    file: UploadFile = File(..., description="Photo evidence for this task"),
-    note: str | None = Form(default=None),
-    profile: Profile = Depends(get_current_profile),
-    db: Session = Depends(get_db),
-) -> dict:
-    task, routine = _own_task(db, task_id, profile.id)
-    data = await file.read()
-
-    try:
-        image_path, mime = save_proof_image(data, profile.id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    claimed = f"{routine.name}: {task.title}"
-    result = verify_photo(
-        data,
-        claimed=task.title,
-        routine_name=routine.name,
-        content_type=mime,
-        extra=note,
-    )
-
-    proof = Proof(
-        user_id=profile.id,
-        task_id=task.id,
-        claimed=claimed,
-        image_path=image_path,
-        status="pending",
-    )
-    db.add(proof)
-    db.flush()
-
-    outcome = finalize_proof(db, profile, proof, result)
-    db.refresh(routine)
-
-    return {
-        "proof": serialize_proof(db, proof),
-        "approved": outcome.approved,
-        "coins_awarded": outcome.coins_awarded,
-        "elo_awarded": outcome.elo_awarded,
-        "task_id": task.id,
-        "reward": _reward_payload(outcome.reward, profile) if outcome.reward else None,
-        "routine": serialize_routine(db, routine, profile.id) if outcome.routine else None,
     }

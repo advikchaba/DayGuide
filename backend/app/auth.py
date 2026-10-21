@@ -22,17 +22,10 @@ from .catalog import DEFAULT_AVATAR, DEFAULT_THEME
 from .config import settings
 from .database import get_db
 from .economy import STARTING_COINS, rank_for
-from .models import Profile, Routine, Task
+from .models import Profile
 from .security import decode_dev_token, new_user_id
 
 logger = logging.getLogger("routinery.auth")
-
-_FIRST_ROUTINE = (
-    ("Wake up on time", False),
-    ("Drink a glass of water", False),
-    ("Move your body for 20 minutes", True),
-    ("Plan the top 3 tasks of the day", False),
-)
 
 
 class AuthError(HTTPException):
@@ -110,7 +103,7 @@ def resolve_identity(token: str) -> Identity:
 # Profile provisioning
 # --------------------------------------------------------------------------- #
 def provision_profile(db: Session, identity: Identity) -> Profile:
-    """Return the profile for an identity, creating it (and a starter routine) on first login."""
+    """Return the profile for an identity, creating it on first login."""
     profile = db.get(Profile, identity.user_id)
     if profile:
         if identity.email and profile.email != identity.email:
@@ -118,7 +111,8 @@ def provision_profile(db: Session, identity: Identity) -> Profile:
             db.commit()
         return profile
 
-    # A new auth user with no profile yet: bootstrap the account.
+    # A new auth user with no profile yet: bootstrap the account. They start
+    # with no routine - building one is the first thing the app asks them to do.
     profile = Profile(
         id=identity.user_id,
         email=identity.email or f"{identity.user_id}@routinery.local",
@@ -128,19 +122,6 @@ def provision_profile(db: Session, identity: Identity) -> Profile:
         theme_slug=DEFAULT_THEME,
     )
     db.add(profile)
-
-    routine = Routine(user_id=profile.id, name="Morning Routine", emoji="")
-    db.add(routine)
-    db.flush()
-    for position, (title, needs_proof) in enumerate(_FIRST_ROUTINE):
-        db.add(
-            Task(
-                routine_id=routine.id,
-                title=title,
-                requires_proof=needs_proof,
-                position=position,
-            )
-        )
     db.commit()
     db.refresh(profile)
     logger.info("Provisioned new profile %s", profile.id)
@@ -148,7 +129,7 @@ def provision_profile(db: Session, identity: Identity) -> Profile:
 
 
 def create_local_user(db: Session, email: str, password_hash: str) -> Profile:
-    """Create a fully local (dev-auth) user row."""
+    """Create a fully local (dev-auth) user row with no starter routine."""
     profile = Profile(
         id=new_user_id(),
         email=email.lower(),
@@ -159,18 +140,6 @@ def create_local_user(db: Session, email: str, password_hash: str) -> Profile:
         theme_slug=DEFAULT_THEME,
     )
     db.add(profile)
-    routine = Routine(user_id=profile.id, name="Morning Routine", emoji="")
-    db.add(routine)
-    db.flush()
-    for position, (title, needs_proof) in enumerate(_FIRST_ROUTINE):
-        db.add(
-            Task(
-                routine_id=routine.id,
-                title=title,
-                requires_proof=needs_proof,
-                position=position,
-            )
-        )
     db.commit()
     db.refresh(profile)
     return profile

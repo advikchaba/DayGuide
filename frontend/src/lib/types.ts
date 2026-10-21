@@ -35,6 +35,7 @@ export interface Task {
   title: string
   note: string | null
   requires_proof: boolean
+  scheduled_time: string
   coin_value: number
   position: number
   completed_today: boolean
@@ -66,6 +67,9 @@ export interface Reward {
   messages: string[]
   new_balance: number
   new_elo: number
+  on_time: boolean
+  time_delta_minutes: number
+  scheduled_time: string | null
 }
 
 export interface TaskCompleteResponse {

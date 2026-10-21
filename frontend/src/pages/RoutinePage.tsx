@@ -4,10 +4,15 @@ import { TaskRow } from '../components/TaskRow'
 import { RewardBurst } from '../components/RewardBurst'
 import { Avatar, Badge, Button, Card, CoinPill, EmptyState, ProgressBar, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
-import { prepareProofPhoto } from '../lib/images'
-import type { ProofVerification, Reward, Routine, Task, TaskCompleteResponse } from '../lib/types'
+import { localDateString, localTimeString, nextSlot } from '../lib/time'
+import type { Reward, Routine, Task, TaskCompleteResponse } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useToast } from '../state/ToastContext'
+
+function timingLabel(delta: number): string {
+  if (delta === 0) return 'right on schedule'
+  return `${delta} min from schedule`
+}
 
 export function RoutinePage() {
   const { profile, refresh } = useAuth()
@@ -20,6 +25,7 @@ export function RoutinePage() {
   const [reward, setReward] = useState<Reward | null>(null)
   const [rewardOpen, setRewardOpen] = useState(false)
   const [newTask, setNewTask] = useState('')
+  const [newTaskTime, setNewTaskTime] = useState(nextSlot())
   const [adding, setAdding] = useState(false)
 
   const active = useMemo(
@@ -29,7 +35,7 @@ export function RoutinePage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.get<Routine[]>('/routines')
+      const data = await api.get<Routine[]>(`/routines?local_date=${localDateString()}`)
       setRoutines(data)
       setActiveId((current) => current ?? data[0]?.id ?? null)
     } catch (error) {
@@ -48,48 +54,48 @@ export function RoutinePage() {
   }
 
   const handleToggle = async (task: Task) => {
+    const wasCompleted = task.completed_today
     setBusyTask(task.id)
     try {
-      const result = task.completed_today
-        ? await api.del<TaskCompleteResponse>(`/tasks/${task.id}/complete`)
-        : await api.post<TaskCompleteResponse>(`/tasks/${task.id}/complete`)
+      const result = wasCompleted
+        ? await api.del<TaskCompleteResponse>(
+            `/tasks/${task.id}/complete?local_date=${localDateString()}`,
+          )
+        : await api.post<TaskCompleteResponse>(`/tasks/${task.id}/complete`, {
+            local_time: localTimeString(),
+            local_date: localDateString(),
+          })
 
       replaceRoutine(result.routine)
 
-      const coins = result.reward.coins
-      if (result.reward.perfect || coins < 0) {
-        setReward(result.reward)
-        setRewardOpen(true)
-      } else if (coins > 0) {
-        push(`+${coins} coins and +${result.reward.elo} ELO`, 'coins')
+      if (!wasCompleted) {
+        if (result.reward.perfect) {
+          setReward(result.reward)
+          setRewardOpen(true)
+        } else if (result.reward.on_time) {
+          push(
+            `+${result.reward.coins} coins · +${result.reward.elo} ELO · ${timingLabel(result.reward.time_delta_minutes)}`,
+            'coins',
+          )
+        } else {
+          const floorNote =
+            result.reward.elo === 0 && result.reward.new_elo <= 100
+              ? ' · ELO already at the 100 floor'
+              : ''
+          push(
+            `${timingLabel(result.reward.time_delta_minutes)} · ${result.reward.elo} ELO${floorNote} · no coins`,
+            'error',
+          )
+        }
+      } else {
+        push('Task unchecked — its coins and ELO were reversed.', 'info')
       }
+
       await refresh()
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not update that task.', 'error')
     } finally {
       setBusyTask(null)
-    }
-  }
-
-  const handleProof = async (task: Task, file: File) => {
-    const form = new FormData()
-    form.append('file', await prepareProofPhoto(file))
-
-    try {
-      const result = await api.upload<ProofVerification>(`/tasks/${task.id}/proof`, form)
-      if (result.routine) replaceRoutine(result.routine)
-
-      if (result.approved) {
-        setReward(result.reward)
-        setRewardOpen(true)
-      } else if (result.proof.status === 'pending') {
-        push('Photo received — it is queued for human review.', 'info')
-      } else {
-        push(`Photo rejected: ${result.proof.reason}`, 'error')
-      }
-      await refresh()
-    } catch (error) {
-      push(error instanceof ApiError ? error.detail : 'Could not upload that photo.', 'error')
     }
   }
 
@@ -99,13 +105,17 @@ export function RoutinePage() {
 
     setAdding(true)
     try {
-      const updated = await api.post<Routine>(`/routines/${active.id}/tasks`, {
-        title: newTask.trim(),
-        requires_proof: false,
-        coin_value: 10,
-      })
+      const updated = await api.post<Routine>(
+        `/routines/${active.id}/tasks?local_date=${localDateString()}`,
+        {
+          title: newTask.trim(),
+          scheduled_time: newTaskTime,
+          coin_value: 10,
+        },
+      )
       replaceRoutine(updated)
       setNewTask('')
+      setNewTaskTime(nextSlot(updated.tasks.length * 30))
       push('Task added to today’s checklist.', 'success')
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not add that task.', 'error')
@@ -147,8 +157,8 @@ export function RoutinePage() {
               </h1>
               <p className="mt-1 max-w-md text-sm text-muted">
                 {doneToday
-                  ? 'Routine complete — you already banked the coins and the ELO today.'
-                  : 'Tick everything off to bank 200 coins and +50 ELO.'}
+                  ? 'Every task landed on time. Your perfect-day coins are banked.'
+                  : 'Check tasks in near their scheduled time. On time earns coins and up to +50 ELO. More than 20 minutes off costs ELO.'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -163,8 +173,8 @@ export function RoutinePage() {
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <CoinPill coins={profile?.coins ?? 0} />
             <Badge tone="accent">{profile?.streak ?? 0} day streak</Badge>
-            <Badge tone="neutral">{profile?.matches_won ?? 0} race wins</Badge>
             <Badge tone="neutral">{profile?.routines_completed ?? 0} perfect routines</Badge>
+            <Badge tone="neutral">{profile?.tasks_completed ?? 0} tasks done</Badge>
           </div>
         </Card>
 
@@ -187,9 +197,9 @@ export function RoutinePage() {
                   New routine
                 </Button>
               </Link>
-              <Link to="/ranked" className="flex-1">
+              <Link to="/leaderboard" className="flex-1">
                 <Button size="sm" full>
-                  Race now
+                  View ladder
                 </Button>
               </Link>
             </div>
@@ -224,7 +234,7 @@ export function RoutinePage() {
         <section>
           <SectionTitle
             title={active.name}
-            subtitle="Tap the circle to complete a task, or attach a photo for proof bonuses."
+            subtitle="Tap a task when you do it. The closer to its scheduled time, the bigger the reward."
             action={
               active.perfect_today ? (
                 <Badge tone="success">Perfect today</Badge>
@@ -237,7 +247,7 @@ export function RoutinePage() {
           <ul className="space-y-2.5">
             {active.tasks.map((task) => (
               <div key={task.id} className="group relative">
-                <TaskRow task={task} busy={busyTask === task.id} onToggle={handleToggle} onProof={handleProof} />
+                <TaskRow task={task} busy={busyTask === task.id} onToggle={handleToggle} />
                 <button
                   type="button"
                   onClick={() => handleDeleteTask(task)}
@@ -250,13 +260,21 @@ export function RoutinePage() {
             ))}
           </ul>
 
-          <form onSubmit={handleQuickAdd} className="mt-3 flex gap-2">
+          <form onSubmit={handleQuickAdd} className="mt-3 flex flex-wrap gap-2">
             <input
               value={newTask}
               onChange={(event) => setNewTask(event.target.value)}
               placeholder="Add another task to this routine…"
               maxLength={120}
-              className="focus-ring flex-1 rounded-lg bg-surface-2 px-4 py-2.5 text-sm"
+              className="focus-ring min-w-[200px] flex-1 rounded-lg bg-surface-2 px-4 py-2.5 text-sm"
+            />
+            <input
+              type="time"
+              value={newTaskTime}
+              onChange={(event) => setNewTaskTime(event.target.value)}
+              required
+              aria-label="Scheduled time"
+              className="focus-ring rounded-lg bg-surface-2 px-3 py-2.5 text-sm"
             />
             <Button type="submit" variant="secondary" loading={adding} disabled={!newTask.trim()}>
               Add
@@ -266,7 +284,7 @@ export function RoutinePage() {
       ) : (
         <EmptyState
           title="No routine yet"
-          body="Create your first routine — a handful of tasks you want to do every single day."
+          body="Start with a name, a few tasks, and the times you want to do them. You can add more later."
           action={
             <Link to="/routines/new">
               <Button>Create a routine</Button>
