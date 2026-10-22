@@ -8,6 +8,7 @@ import { ThemeBanner } from './ThemeBanner'
 
 const LINKS = [
   { to: '/app', label: 'Routine' },
+  { to: '/reports', label: 'Reports' },
   { to: '/shop', label: 'Shop' },
   { to: '/leaderboard', label: 'Ladder' },
   { to: '/profile', label: 'Profile' },

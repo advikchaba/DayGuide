@@ -199,6 +199,70 @@ export interface LedgerEntry {
   created_at: string
 }
 
+export type ReportRange = '3d' | 'week' | 'month'
+
+export interface ReportSummary {
+  tasks_completed: number
+  tasks_on_time: number
+  tasks_late: number
+  on_time_rate: number
+  perfect_routines: number
+  active_days: number
+  coins_earned: number
+  elo_earned: number
+  average_delta_minutes: number
+}
+
+export interface ReportDay {
+  date: string
+  label: string
+  weekday: string
+  tasks: number
+  on_time: number
+  late: number
+  perfect: number
+  coins: number
+  elo: number
+  on_time_rate: number
+}
+
+export interface ReportRoutine {
+  id: number
+  name: string
+  tasks_completed: number
+  tasks_on_time: number
+  perfect_routines: number
+  coins_earned: number
+  elo_earned: number
+  on_time_rate: number
+}
+
+export interface ReportBestDay {
+  date: string
+  label: string
+  weekday: string
+  tasks: number
+  on_time: number
+  perfect: number
+  coins: number
+  elo: number
+}
+
+export interface ReportPayload {
+  range: ReportRange
+  label: string
+  start: string
+  end: string
+  days: number
+  summary: ReportSummary
+  previous: ReportSummary
+  daily: ReportDay[]
+  routines: ReportRoutine[]
+  best_day: ReportBestDay | null
+  streak: number
+  best_streak: number
+}
+
 export const RANK_TIERS: RankInfo[] = [
   { name: 'Copper', min_elo: 100, max_elo: 500, color: '#B87333', progress: 0, elo_to_next: 0 },
   { name: 'Bronze', min_elo: 500, max_elo: 800, color: '#8C5A2B', progress: 0, elo_to_next: 0 },

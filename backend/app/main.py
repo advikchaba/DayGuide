@@ -17,7 +17,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .config import settings
 from .database import SessionLocal, create_all
-from .routers import auth_dev, leaderboard, profile, routines, shop
+from .routers import auth_dev, leaderboard, profile, reports, routines, shop
 from .seed import run_seed
 from .services import db_sync
 from .services.storage import uploads_root
@@ -97,6 +97,7 @@ for router in (
     routines.router,
     shop.router,
     leaderboard.router,
+    reports.router,
 ):
     app.include_router(router, prefix=settings.api_prefix)
 

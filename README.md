@@ -146,6 +146,7 @@ a task at the ELO floor cannot award free points.
 | Log in | `/login` | Email + password, Google OAuth button, dev-provider notice |
 | Onboarding | `/onboarding` | Claim the free first username (live availability check) + optional picture upload |
 | Routine | `/app` | Today's timed checklist, per-task timing rewards, streak + progress |
+| Reports | `/reports` | Rolling last 3 days / weekly / last month summary, daily rhythm, timing, routine breakdown |
 | Builder | `/routines/new` | Name, templates, per-task time and coin value |
 | Shop | `/shop` | 12 themes, buy/equip, affordability checks (profile pictures are uploaded) |
 | Ladder | `/leaderboard` | Top 50 by ELO / coins / streak + your own position |
@@ -188,6 +189,7 @@ POST   /me/username             claim/change username (400 coins after the first
 POST   /me/avatar/upload        upload a custom profile picture (100 coins per change)
 GET    /me/ledger               coin + ELO history
 GET    /routines                routines with today's completion state (?local_date=YYYY-MM-DD)
+GET    /reports                 rolling report (?range=3d|week|month&local_date=YYYY-MM-DD)
 POST   /routines                create a routine (tasks include scheduled_time)
 PATCH  /routines/{id}           rename a routine
 POST   /routines/{id}/tasks     quick-add a timed task

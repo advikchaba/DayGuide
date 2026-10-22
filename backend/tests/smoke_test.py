@@ -284,6 +284,69 @@ def main() -> None:
             client.get("/api/leaderboard", params={"metric": "matches_won"}, headers=headers).status_code == 200,
         )
 
+        print("\n== reports ==")
+        for report_range, expected_days in (("3d", 3), ("week", 7), ("month", 30)):
+            response = client.get(
+                "/api/reports",
+                params={"range": report_range, "local_date": TODAY},
+                headers=headers,
+            )
+            check(f"{report_range} report loads", response.status_code == 200, response.text)
+            report = response.json() if response.status_code == 200 else {}
+            check(
+                f"{report_range} report covers {expected_days} days",
+                len(report.get("daily", [])) == expected_days,
+                report.get("daily"),
+            )
+            check(
+                f"{report_range} report echoes its range",
+                report.get("range") == report_range and report.get("days") == expected_days,
+                report,
+            )
+            summary = report.get("summary", {})
+            check(
+                f"{report_range} report counts check-ins",
+                summary.get("tasks_completed", 0) >= 1
+                and summary.get("tasks_on_time", 0) >= 1,
+                summary,
+            )
+            check(
+                f"{report_range} report includes previous period",
+                "tasks_completed" in report.get("previous", {}),
+                report.get("previous"),
+            )
+            check(
+                f"{report_range} report breaks down routines",
+                any(row.get("tasks_completed", 0) >= 1 for row in report.get("routines", [])),
+                report.get("routines"),
+            )
+            check(
+                f"{report_range} report names a best day",
+                bool(report.get("best_day")),
+                report.get("best_day"),
+            )
+
+        default_report = client.get(
+            "/api/reports", params={"local_date": TODAY}, headers=headers
+        )
+        check(
+            "reports default to a weekly window",
+            default_report.status_code == 200 and default_report.json()["days"] == 7,
+            default_report.text,
+        )
+        check(
+            "unknown report range rejected",
+            client.get(
+                "/api/reports",
+                params={"range": "year", "local_date": TODAY},
+                headers=headers,
+            ).status_code == 422,
+        )
+        check(
+            "reports require auth",
+            client.get("/api/reports", params={"range": "week"}).status_code == 401,
+        )
+
         print(f"\nAll {len(PASSED)} checks passed.")
 
 
