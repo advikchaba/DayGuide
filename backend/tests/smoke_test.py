@@ -198,7 +198,12 @@ def main() -> None:
 
         equipped = client.post("/api/me/theme", json={"slug": "light"}, headers=headers).json()
         check("free theme equippable", equipped["theme_slug"] == "light", equipped)
-        client.post("/api/me/theme", json={"slug": "dark"}, headers=headers)
+        back = client.post("/api/shop/dark/equip", headers=headers)
+        check(
+            "free theme can switch back through the shop",
+            back.status_code == 200 and back.json()["theme_slug"] == "dark",
+            back.text,
+        )
 
         locked = client.post("/api/shop/flame/equip", headers=headers)
         check("cannot equip unowned avatar", locked.status_code == 403, locked.text)

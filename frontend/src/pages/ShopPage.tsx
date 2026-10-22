@@ -58,6 +58,21 @@ export function ShopPage() {
     try {
       const me = await api.post<Profile>(`/shop/${item.slug}/equip`)
       applyProfile(me)
+      setShop((current) =>
+        current
+          ? {
+              ...current,
+              coins: me.coins,
+              items: current.items.map((existing) => ({
+                ...existing,
+                equipped:
+                  existing.kind === item.kind
+                    ? existing.slug === item.slug
+                    : existing.equipped,
+              })),
+            }
+          : current,
+      )
       if (item.kind === 'theme') setTheme(item.slug)
       push(`${item.name} equipped.`, 'success')
     } catch (error) {
@@ -123,6 +138,10 @@ export function ShopPage() {
         {items.map((item) => {
           const theme = getTheme(item.slug)
           const avatar = getAvatar(item.slug)
+          const isEquipped =
+            item.kind === 'theme'
+              ? profile?.theme_slug === item.slug
+              : profile?.avatar_slug === item.slug
           const affordable = (profile?.coins ?? 0) >= item.price
           const primary = theme.vars['--accent'] ?? item.meta.accent ?? '#dcdcdc'
           const secondary = theme.vars['--accent-2'] ?? item.meta.accent2 ?? '#d3d3d3'
@@ -147,7 +166,7 @@ export function ShopPage() {
                       <span className="h-6 w-6 rounded" style={{ background: secondary }} />
                     </span>
                   </div>
-                  {item.equipped ? (
+                  {isEquipped ? (
                     <span className="absolute right-2 top-2">
                       <Badge tone="success">equipped</Badge>
                     </span>
@@ -161,7 +180,7 @@ export function ShopPage() {
                   <span className="text-3xl font-black" style={{ color: avatar.accent }}>
                     {avatar.initials}
                   </span>
-                  {item.equipped ? (
+                  {isEquipped ? (
                     <span className="absolute right-2 top-2">
                       <Badge tone="success">equipped</Badge>
                     </span>
@@ -187,7 +206,7 @@ export function ShopPage() {
                 </span>
 
                 {item.owned ? (
-                  item.equipped ? (
+                  isEquipped ? (
                     <Button size="sm" variant="ghost" disabled>
                       In use
                     </Button>
