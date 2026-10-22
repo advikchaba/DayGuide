@@ -147,7 +147,7 @@ a task at the ELO floor cannot award free points.
 | Onboarding | `/onboarding` | Claim the free first username (live availability check) + optional picture upload |
 | Routine | `/app` | Today's timed checklist, per-task timing rewards, streak + progress |
 | Builder | `/routines/new` | Name, templates, per-task time and coin value |
-| Shop | `/shop` | 13 themes, buy/equip, affordability checks (profile pictures are uploaded) |
+| Shop | `/shop` | 12 themes, buy/equip, affordability checks (profile pictures are uploaded) |
 | Ladder | `/leaderboard` | Top 50 by ELO / coins / streak + your own position |
 | Profile | `/profile` | Stats, username change, picture upload, coin/ELO ledger, timing rules |
 

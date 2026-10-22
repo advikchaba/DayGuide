@@ -17,8 +17,6 @@ export interface ThemeDefinition {
   image?: string
   imageAlt?: string
   imagePosition?: string
-  imageCredit?: string
-  imageCreditUrl?: string
   vars: Record<string, string>
 }
 
@@ -201,19 +199,6 @@ const frogPalette: ThemePalette = {
   accentInk: '#06210f',
 }
 
-const clownPalette: ThemePalette = {
-  bg: '#150b0b',
-  bgSoft: '#1e1010',
-  surface: '#241313',
-  surface2: '#311b1b',
-  surfaceSolid: '#2a1717',
-  text: '#fff8f3',
-  muted: '#c9a7a0',
-  accent: '#ef4444',
-  accent2: '#fca5a5',
-  accentInk: '#ffffff',
-}
-
 function hexToRgba(hex: string, alpha: number): string {
   const clean = hex.replace('#', '')
   const value = parseInt(clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean, 16)
@@ -334,16 +319,14 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     slug: 'meme-doge',
-    name: 'Doge Mode',
+    name: 'Good Boy',
     isFree: false,
     price: 20_000,
     rarity: 'epic',
-    description: 'Such routine. Very coins. Wow.',
+    description: 'Sit. Stay. Finish the checklist.',
     image: '/theme-art/doge.jpg',
-    imageAlt: 'A dog in a yellow sweater against a blue background.',
+    imageAlt: 'A bulldog puppy sitting on a sunlit lawn.',
     imagePosition: 'center 45%',
-    imageCredit: 'Unsplash',
-    imageCreditUrl: 'https://unsplash.com/license',
     vars: imageVars(dogePalette, '/theme-art/doge.jpg', 'center 45%'),
   },
   {
@@ -354,10 +337,8 @@ export const THEMES: ThemeDefinition[] = [
     rarity: 'epic',
     description: 'Everything is on fire, but the checklist is done.',
     image: '/theme-art/thisisfine.jpg',
-    imageAlt: 'Close-up of orange flames.',
+    imageAlt: 'Burning branches and leaves with glowing sparks.',
     imagePosition: 'center',
-    imageCredit: 'MarcusObal / CC BY-SA 3.0',
-    imageCreditUrl: 'https://commons.wikimedia.org/wiki/File:FIRE_01.JPG',
     vars: imageVars(firePalette, '/theme-art/thisisfine.jpg'),
   },
   {
@@ -368,11 +349,9 @@ export const THEMES: ThemeDefinition[] = [
     rarity: 'epic',
     description: 'Boss energy, nine lives, zero excuses.',
     image: '/theme-art/cat.jpg',
-    imageAlt: 'A tabby cat resting on a pale sofa.',
-    imagePosition: 'center 42%',
-    imageCredit: 'Unsplash',
-    imageCreditUrl: 'https://unsplash.com/license',
-    vars: imageVars(catPalette, '/theme-art/cat.jpg', 'center 42%'),
+    imageAlt: 'A kitten sitting on a cream knitted blanket.',
+    imagePosition: 'center 40%',
+    vars: imageVars(catPalette, '/theme-art/cat.jpg', 'center 40%'),
   },
   {
     slug: 'meme-frog',
@@ -382,25 +361,9 @@ export const THEMES: ThemeDefinition[] = [
     rarity: 'epic',
     description: 'Hop to it. Ribbit.',
     image: '/theme-art/frog.jpg',
-    imageAlt: 'A green frog sitting among reeds in a pond.',
-    imagePosition: 'center 45%',
-    imageCredit: 'Dopibaj500 / CC0',
-    imageCreditUrl: 'https://commons.wikimedia.org/wiki/File:Close-up_of_a_green_frog_sitting_on_reeds_in_a_pond.jpg',
-    vars: imageVars(frogPalette, '/theme-art/frog.jpg', 'center 45%'),
-  },
-  {
-    slug: 'meme-clown',
-    name: 'Clown Mode',
-    isFree: false,
-    price: 20_000,
-    rarity: 'epic',
-    description: 'For the days you skip leg day and log it anyway.',
-    image: '/theme-art/clown.jpg',
-    imageAlt: 'A clown with a red nose and a black hat.',
-    imagePosition: 'center 28%',
-    imageCredit: 'charliegolonkiewicz / CC BY 2.0',
-    imageCreditUrl: 'https://commons.wikimedia.org/wiki/File:Sad_Clown_-_Occupy_Wall_St.jpg',
-    vars: imageVars(clownPalette, '/theme-art/clown.jpg', 'center 28%'),
+    imageAlt: 'A green tree frog sitting on a wet leaf.',
+    imagePosition: 'center 50%',
+    vars: imageVars(frogPalette, '/theme-art/frog.jpg', 'center 50%'),
   },
 ]
 

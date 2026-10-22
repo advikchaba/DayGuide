@@ -1,27 +1,5 @@
-Theme artwork credits
-=====================
+Theme artwork
+=============
 
-doge.jpg
-  Photo by Unsplash (photo-1583511655857-d19b40a7a54e)
-  https://unsplash.com/photos/photo-1583511655857-d19b40a7a54e
-  Unsplash License: https://unsplash.com/license
-
-cat.jpg
-  Photo by Unsplash (photo-1518791841217-8f162f1e1131)
-  https://unsplash.com/photos/photo-1518791841217-8f162f1e1131
-  Unsplash License: https://unsplash.com/license
-
-frog.jpg
-  "Close-up of a green frog sitting on reeds in a pond" by Dopibaj500
-  https://commons.wikimedia.org/wiki/File:Close-up_of_a_green_frog_sitting_on_reeds_in_a_pond.jpg
-  CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
-
-thisisfine.jpg
-  "FIRE 01" by MarcusObal
-  https://commons.wikimedia.org/wiki/File:FIRE_01.JPG
-  CC BY-SA 3.0: https://creativecommons.org/licenses/by-sa/3.0/
-
-clown.jpg
-  "Sad Clown - Occupy Wall St" by charliegolonkiewicz
-  https://commons.wikimedia.org/wiki/File:Sad_Clown_-_Occupy_Wall_St.jpg
-  CC BY 2.0: https://creativecommons.org/licenses/by/2.0/
+The four image-theme artworks in this folder were supplied by the project owner.
+No external image sources are used.

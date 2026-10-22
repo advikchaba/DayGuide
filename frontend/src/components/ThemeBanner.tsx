@@ -29,16 +29,6 @@ export function ThemeBanner({ theme }: { theme: ThemeDefinition }) {
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Image theme active</p>
             <h2 className="mt-1.5 text-2xl tracking-tight">{theme.name}</h2>
             <p className="mt-2 text-sm text-muted">{theme.description}</p>
-            {theme.imageCredit ? (
-              <a
-                href={theme.imageCreditUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-block text-[10px] font-bold uppercase tracking-[0.14em] text-muted underline-offset-4 hover:text-ink hover:underline"
-              >
-                Artwork: {theme.imageCredit}
-              </a>
-            ) : null}
           </div>
 
           <div className="flex items-center gap-2">

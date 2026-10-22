@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_profile, profile_payload
+from ..catalog import RETIRED_THEME_SLUGS
 from ..database import get_db, select_for_update
 from ..economy import apply_rewards
 from ..models import Profile, Purchase, ShopItem
@@ -18,7 +19,7 @@ def shop_payload(db: Session, profile: Profile) -> dict:
     """Build the theme shop listing for one user (ownership + equipped flags)."""
     items = (
         db.query(ShopItem)
-        .filter(ShopItem.kind == "theme")
+        .filter(ShopItem.kind == "theme", ShopItem.slug.notin_(RETIRED_THEME_SLUGS))
         .order_by(ShopItem.sort_order.asc(), ShopItem.price.asc())
         .all()
     )
@@ -60,7 +61,7 @@ def buy_item(
     db: Session = Depends(get_db),
 ) -> dict:
     item = db.get(ShopItem, slug)
-    if not item or item.kind != "theme":
+    if not item or item.kind != "theme" or slug in RETIRED_THEME_SLUGS:
         raise HTTPException(status_code=404, detail="That item is not in the shop.")
 
     if item.is_free or any(purchase.item_slug == slug for purchase in profile.purchases):
@@ -93,7 +94,7 @@ def equip_item(
 ) -> dict:
     """Equip an owned (or free) theme and return the updated profile."""
     item = db.get(ShopItem, slug)
-    if not item or item.kind != "theme":
+    if not item or item.kind != "theme" or slug in RETIRED_THEME_SLUGS:
         raise HTTPException(status_code=404, detail="That item is not in the shop.")
 
     owned = item.is_free or any(purchase.item_slug == slug for purchase in profile.purchases)

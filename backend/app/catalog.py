@@ -16,6 +16,10 @@ from __future__ import annotations
 BASE_PRICE_THEME = 10_000
 BASE_PRICE_IMAGE_THEME = 20_000
 
+# Retired themes stay in the database so old purchase rows remain valid, but
+# they are hidden from the shop and cannot be bought or equipped again.
+RETIRED_THEME_SLUGS = {"meme-clown"}
+
 # --- themes ----------------------------------------------------------------- #
 _THEMES: list[dict] = [
     {
@@ -78,8 +82,8 @@ _THEMES: list[dict] = [
     },
     {
         "slug": "meme-doge",
-        "name": "Doge Mode",
-        "description": "Such routine. Very coins. Wow.",
+        "name": "Good Boy",
+        "description": "Sit. Stay. Finish the checklist.",
         "rarity": "epic",
         "price": BASE_PRICE_IMAGE_THEME,
         "meta": {
@@ -130,20 +134,6 @@ _THEMES: list[dict] = [
             "accent2": "#86EFAC",
             "mode": "dark",
             "image": "/theme-art/frog.jpg",
-        },
-    },
-    {
-        "slug": "meme-clown",
-        "name": "Clown Mode",
-        "description": "For the days you skip leg day and log it anyway.",
-        "rarity": "epic",
-        "price": BASE_PRICE_IMAGE_THEME,
-        "meta": {
-            "kind": "image",
-            "accent": "#EF4444",
-            "accent2": "#FCA5A5",
-            "mode": "dark",
-            "image": "/theme-art/clown.jpg",
         },
     },
 ]

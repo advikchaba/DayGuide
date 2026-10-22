@@ -213,8 +213,9 @@ def main() -> None:
         print("\n== shop ==")
         shop = client.get("/api/shop", headers=headers).json()
         themes = [item for item in shop["items"] if item["kind"] == "theme"]
-        check("shop has 13 themes", len(themes) == 13, len(themes))
+        check("shop has 12 themes", len(themes) == 12, len(themes))
         check("shop only sells themes", all(item["kind"] == "theme" for item in shop["items"]), shop["items"])
+        check("clown theme removed", "meme-clown" not in {item["slug"] for item in themes})
         check("colour themes cost 10k", all(t["price"] == 10_000 for t in themes if t["rarity"] == "rare"), themes)
         check("meme themes cost 20k", all(t["price"] == 20_000 for t in themes if t["rarity"] == "epic"), themes)
         check("dark + light are free", {"dark", "light"} <= {t["slug"] for t in themes if t["is_free"]})

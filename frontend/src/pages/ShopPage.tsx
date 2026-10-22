@@ -180,11 +180,6 @@ export function ShopPage() {
                   <Badge tone={RARITY_TONES[item.rarity]}>{item.rarity}</Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">{item.description}</p>
-                {theme.imageCredit ? (
-                  <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
-                    Artwork: {theme.imageCredit}
-                  </p>
-                ) : null}
               </div>
 
               <div className="flex items-center justify-between gap-2">
