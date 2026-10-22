@@ -14,6 +14,12 @@ from sqlalchemy.orm import DeclarativeBase, Session, Query, sessionmaker
 from sqlalchemy.pool import NullPool
 
 from .config import settings
+from .services import db_sync
+
+# Vercel's deployment bundle is read-only. Without a Postgres URL, keep the
+# SQLite file in the one writable directory and mirror it to Supabase Storage.
+if settings.is_serverless and settings.is_sqlite:
+    settings.database_url = f"sqlite:///{db_sync.RUNTIME_DB_PATH.as_posix()}"
 
 
 class Base(DeclarativeBase):
@@ -79,6 +85,10 @@ def get_db() -> Iterator[Session]:
 def create_all() -> None:
     """Create tables that do not exist yet (safe on both SQLite and Postgres)."""
     from . import models  # noqa: F401  (registers the mappers)
+
+    # On Vercel + SQLite, restore the last snapshot before creating/altering
+    # tables so migrations apply to the real data rather than a blank file.
+    db_sync.restore()
 
     Base.metadata.create_all(bind=engine)
     _migrate_existing_tables()
