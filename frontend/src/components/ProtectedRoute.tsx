@@ -1,21 +1,14 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../state/AuthContext'
-import { Spinner } from './ui'
+import { SessionLoading } from './SessionLoading'
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { profile, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
-    return (
-      <div className="app-shell grid min-h-screen place-items-center">
-        <div className="app-content flex items-center gap-3 text-muted">
-          <Spinner />
-          Loading your routine…
-        </div>
-      </div>
-    )
+    return <SessionLoading label="Loading your routine…" />
   }
 
   if (!profile) {

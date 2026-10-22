@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppLayout } from './components/AppLayout'
+import { GuestRoute } from './components/GuestRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { SessionLoading } from './components/SessionLoading'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { LandingPage } from './pages/LandingPage'
 import { LeaderboardPage } from './pages/LeaderboardPage'
@@ -36,7 +38,8 @@ function RootPage() {
   if (hasAuthParams) {
     return <Navigate to={`/auth/callback${location.search}${hash}`} replace />
   }
-  if (!loading && profile) {
+  if (loading) return <SessionLoading />
+  if (profile) {
     return <Navigate to={profile.username ? '/app' : '/onboarding'} replace />
   }
   return <LandingPage />
@@ -64,8 +67,22 @@ export default function App() {
       <ThemeSync />
       <Routes>
         <Route path="/" element={<RootPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <LoginPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <GuestRoute>
+              <SignupPage />
+            </GuestRoute>
+          }
+        />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route
           path="/onboarding"
