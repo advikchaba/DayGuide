@@ -213,8 +213,10 @@ frontend calls `/api` same-origin — no backend URL, CORS setup, or `VITE_API_U
 
 ### Create or convert the project
 
-The project is `routinery` with the production domain `https://routinery-sigma.vercel.app`. If you are
-converting an existing frontend project, keep the domain and Supabase redirect URLs aligned:
+The project is `routinery` with the canonical production domain
+`https://routinery-advik-chaba.vercel.app`. The `routinery-sigma.vercel.app` alias redirects to it so
+browsers keep one login session. If you are converting an existing frontend project, keep the domain
+and Supabase redirect URLs aligned:
 
 1. Open the project → **Settings → General**.
 2. Set **Root Directory** to the repository root (`.`), not `frontend` or `backend`.
@@ -239,9 +241,9 @@ browser bundle.
 | Variable | Value |
 | --- | --- |
 | `ENVIRONMENT` | `production` |
-| `FRONTEND_ORIGIN` | `https://routinery-sigma.vercel.app` (or your project domain) |
+| `FRONTEND_ORIGIN` | `https://routinery-advik-chaba.vercel.app` (canonical project domain) |
 | `EXTRA_ORIGINS` | Custom frontend domains, comma-separated (optional) |
-| `DATABASE_URL` | Supabase **Session pooler** connection string |
+| `DATABASE_URL` | Supabase **Session pooler** connection string (optional; without it the backend persists SQLite in the private `routinery-data` bucket) |
 | `SUPABASE_URL` | `https://YOUR-PROJECT.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (or `SUPABASE_ANON_KEY`) |
 | `SUPABASE_SECRET_KEY` | `sb_secret_...` (or `SUPABASE_SERVICE_ROLE_KEY`) |
@@ -263,13 +265,14 @@ request is slow.
 Open:
 
 ```text
-https://routinery-sigma.vercel.app/api/health
+https://routinery-advik-chaba.vercel.app/api/health
 ```
 
-It should report `"auth":"supabase"` and `"storage":"supabase"`. Then:
+It should report `"auth":"supabase"`, `"storage":"supabase"`, and `"persist":"supabase-storage"` when
+`DATABASE_URL` is unset. Then:
 
 ```text
-https://routinery-sigma.vercel.app/api/config
+https://routinery-advik-chaba.vercel.app/api/config
 ```
 
 `supabase_configured` must be `true`. If `/api/health` returns the frontend HTML, the root
@@ -278,9 +281,11 @@ https://routinery-sigma.vercel.app/api/config
 ### Supabase Auth URLs
 
 In Supabase **Authentication → URL Configuration**, set *Site URL* to
-`https://routinery-sigma.vercel.app` and add
-`https://routinery-sigma.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs for
-development. If you use a custom domain, add it to `EXTRA_ORIGINS` and to Supabase's redirect
+`https://routinery-advik-chaba.vercel.app` and add
+`https://routinery-advik-chaba.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs
+for development. The `routinery-sigma.vercel.app` alias redirects to the canonical host and preserves
+query strings, but using the canonical URL everywhere avoids an extra redirect during OAuth and email
+confirmation. If you use a custom domain, add it to `EXTRA_ORIGINS` and to Supabase's redirect
 allowlist.
 
 ### What runs where
@@ -289,7 +294,7 @@ allowlist.
 | --- | --- |
 | React app | Vercel service `frontend` |
 | FastAPI | Vercel service `backend` (`backend/`) |
-| Profiles, routines, tasks, coins, ELO | Supabase Postgres |
+| Profiles, routines, tasks, coins, ELO | Supabase Postgres, or the private Supabase Storage SQLite fallback when `DATABASE_URL` is unset |
 | Auth | Supabase Auth (email/password + Google) |
 
 ### Notes
