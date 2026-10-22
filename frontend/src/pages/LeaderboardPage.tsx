@@ -107,7 +107,7 @@ export function LeaderboardPage() {
             <Card className="flex flex-wrap items-center gap-4">
               <span className="text-sm font-bold text-muted">Your position</span>
               <span className="text-2xl font-bold">#{board.you.position}</span>
-              <Avatar slug={board.you.avatar_slug} size={36} />
+              <Avatar slug={board.you.avatar_slug} size={36} src={board.you.avatar_url} />
               <span className="font-bold">@{board.you.username}</span>
               <RankBadge rank={{ name: board.you.rank_name }} elo={board.you.elo} />
               <span className="ml-auto text-sm font-bold">{metricValue(board.you)}</span>
@@ -126,7 +126,7 @@ export function LeaderboardPage() {
                   ].join(' ')}
                 >
                   <span className="w-9 text-center text-sm font-bold text-muted">#{entry.position}</span>
-                  <Avatar slug={entry.avatar_slug} size={38} />
+                  <Avatar slug={entry.avatar_slug} size={38} src={entry.avatar_url} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold">
                       @{entry.username}

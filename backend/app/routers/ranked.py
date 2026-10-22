@@ -29,7 +29,7 @@ from ..schemas import (
 from ..security import generate_match_code
 from ..serializers import serialize_match, serialize_proof
 from ..services.proofs import finalize_proof
-from ..services.storage import save_proof_image
+from ..services.storage import public_url, save_proof_image
 from ..services.vision import verify_photo
 
 router = APIRouter(prefix="/ranked", tags=["ranked"])
@@ -370,6 +370,7 @@ def ranked_leaderboard(
                 "user_id": row.id,
                 "username": row.username,
                 "avatar_slug": row.avatar_slug,
+                "avatar_url": public_url(row.avatar_path) if row.avatar_path else None,
                 "elo": row.elo,
                 "rank_name": rank_for(row.elo).name,
                 "rank_color": rank_for(row.elo).color,

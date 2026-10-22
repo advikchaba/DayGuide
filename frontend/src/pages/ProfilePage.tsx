@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, CoinPill, Field, Modal, SectionTitle, Stat } from '../components/ui'
+import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { api, ApiError } from '../lib/api'
 import { getTheme } from '../lib/themes'
 import type { LedgerEntry, Profile } from '../lib/types'
@@ -70,7 +71,7 @@ export function ProfilePage() {
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <Card className="space-y-4">
           <div className="flex flex-wrap items-center gap-4">
-            <Avatar slug={profile.avatar_slug} size={72} />
+            <Avatar slug={profile.avatar_slug} size={72} src={profile.avatar_url} />
             <div className="min-w-0">
               <h2 className="text-3xl tracking-tight">
                 {profile.username ? `@${profile.username}` : 'No username yet'}
@@ -94,9 +95,10 @@ export function ProfilePage() {
             <Button variant="secondary" onClick={() => setUsernameModal(true)}>
               {isFirstUsername ? 'Claim username (free)' : 'Change username · 400 coins'}
             </Button>
-            <Link to="/shop?tab=avatar">
-              <Button variant="secondary">Change picture · from 100 coins</Button>
+            <Link to="/shop">
+              <Button variant="secondary">Change theme</Button>
             </Link>
+            <ProfilePictureUpload />
             <Link to="/leaderboard">
               <Button variant="ghost">View ladder</Button>
             </Link>
@@ -115,7 +117,8 @@ export function ProfilePage() {
           </div>
 
           <p className="text-xs text-muted">
-            Usernames are free once. After that a change costs 400 coins and only works if the name is not taken.
+            Usernames are free once; later changes cost 400 coins and only work if the name is not taken.
+            Profile picture changes cost 100 coins.
           </p>
         </Card>
 

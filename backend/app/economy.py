@@ -55,6 +55,7 @@ RANKED_LOSS_COINS = 10
 
 # --- cosmetics -------------------------------------------------------------
 USERNAME_CHANGE_COST = 400
+AVATAR_CHANGE_COST = 100
 STARTING_COINS = 100
 
 

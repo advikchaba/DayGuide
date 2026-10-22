@@ -122,6 +122,7 @@ def serialize_match(db: Session, match: Match, viewer_id: str) -> dict:
                 "user_id": player.user_id,
                 "username": profile.username if profile else None,
                 "avatar_slug": profile.avatar_slug if profile else "spark",
+                "avatar_url": public_url(profile.avatar_path) if profile and profile.avatar_path else None,
                 "rank_name": rank_for(player.elo_before).name,
                 "elo": player.elo_after if player.elo_after is not None else player.elo_before,
                 "progress": progress,

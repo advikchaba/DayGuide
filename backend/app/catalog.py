@@ -1,23 +1,20 @@
-"""The unlockable catalogue: themes and profile pictures.
+"""The unlockable theme catalogue.
 
 Prices follow the product spec:
   * colour themes ......... 10,000 coins
   * image / meme themes ... 20,000 coins
-  * starter profile pic ... 100 coins
-  * premium profile pics .. 600 coins
   * light + dark themes ... free defaults
 
+Profile pictures are uploaded by the user instead of being shop items.
+
 ``meta`` carries everything the frontend needs to render the cosmetic
-(accent colour, initials, background image url, ...).
+(accent colour, background image url, ...).
 """
 
 from __future__ import annotations
 
 BASE_PRICE_THEME = 10_000
 BASE_PRICE_IMAGE_THEME = 20_000
-BASE_PRICE_AVATAR = 600
-STARTER_AVATAR_PRICE = 100
-STARTER_AVATAR_SLUG = "nova"
 
 # --- themes ----------------------------------------------------------------- #
 _THEMES: list[dict] = [
@@ -151,32 +148,9 @@ _THEMES: list[dict] = [
     },
 ]
 
-# --- avatars ---------------------------------------------------------------- #
-_AVATARS: list[dict] = [
-    ("spark", "Spark", "SP", "#7C5CFF", True),
-    ("nova", "Nova", "NV", "#2DD4BF", False),
-    ("flame", "Flame", "FL", "#F97316", False),
-    ("bolt", "Bolt", "BO", "#FACC15", False),
-    ("waves", "Waves", "WV", "#38BDF8", False),
-    ("leaf", "Leaf", "LF", "#22C55E", False),
-    ("moon", "Moon", "MN", "#A78BFA", False),
-    ("sun", "Sun", "SN", "#FB923C", False),
-    ("cat", "Cat", "CT", "#F472B6", False),
-    ("dog", "Dog", "DG", "#F59E0B", False),
-    ("frog", "Frog", "FR", "#4ADE80", False),
-    ("ghost", "Ghost", "GH", "#E2E8F0", False),
-    ("robot", "Robot", "RB", "#94A3B8", False),
-    ("alien", "Alien", "AL", "#34D399", False),
-    ("dragon", "Dragon", "DR", "#EF4444", False),
-    ("crown", "Crown", "CR", "#F5C542", False),
-    ("skull", "Skull", "SK", "#CBD5E1", False),
-    ("cherry", "Cherry", "CH", "#F43F5E", False),
-    ("rocket", "Rocket", "RK", "#60A5FA", False),
-]
-
 
 def build_catalog() -> list[dict]:
-    """Return the flat, ordered list of shop items ready for upsert."""
+    """Return the flat, ordered list of theme shop items ready for upsert."""
     items: list[dict] = []
 
     for order, theme in enumerate(_THEMES):
@@ -191,22 +165,6 @@ def build_catalog() -> list[dict]:
                 "is_free": bool(theme.get("free")),
                 "sort_order": order,
                 "meta": theme["meta"],
-            }
-        )
-
-    for order, (slug, name, initials, accent, free) in enumerate(_AVATARS):
-        is_starter = slug == STARTER_AVATAR_SLUG
-        items.append(
-            {
-                "slug": slug,
-                "name": name,
-                "kind": "avatar",
-                "description": f"{name} profile picture",
-                "price": 0 if free else (STARTER_AVATAR_PRICE if is_starter else BASE_PRICE_AVATAR),
-                "rarity": "common" if free or is_starter else "rare",
-                "is_free": free,
-                "sort_order": order,
-                "meta": {"initials": initials, "accent": accent},
             }
         )
 

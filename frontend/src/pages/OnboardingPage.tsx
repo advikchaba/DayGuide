@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { AuthShell } from '../components/AuthShell'
+import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { Avatar, Badge, Button, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { getAvatar } from '../lib/themes'
@@ -89,21 +90,17 @@ export function OnboardingPage() {
       title="Claim your username"
       subtitle="This is what other players will see on the ladder. Free right now — 400 coins later."
     >
-      <div className="mb-5 flex items-center gap-4 rounded-lg bg-surface-2 p-4">
-        <Avatar slug={profile?.avatar_slug} size={52} />
+      <div className="mb-5 flex flex-wrap items-center gap-4 rounded-lg bg-surface-2 p-4">
+        <Avatar slug={profile?.avatar_slug} size={52} src={profile?.avatar_url} />
         <div className="min-w-0">
           <p className="truncate text-base font-bold">
             {username ? `@${username}` : '@yourname'}
           </p>
           <p className="text-xs text-muted">
-            {preview.name} profile picture · {profile?.coins ?? 0} coins
+            {profile?.avatar_url ? 'Custom profile picture' : `${preview.name} profile picture`} ·{' '}
+            {profile?.coins ?? 0} coins
           </p>
-          <Link
-            to="/shop?tab=avatar"
-            className="mt-1 inline-block text-xs font-semibold text-accent hover:underline"
-          >
-            Change picture · from 100 coins
-          </Link>
+          <ProfilePictureUpload variant="ghost" size="sm" className="mt-1" />
         </div>
       </div>
 

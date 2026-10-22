@@ -21,9 +21,10 @@ from sqlalchemy.orm import Session
 from .catalog import DEFAULT_AVATAR, DEFAULT_THEME
 from .config import settings
 from .database import get_db
-from .economy import STARTING_COINS, rank_for
+from .economy import AVATAR_CHANGE_COST, STARTING_COINS, rank_for
 from .models import Profile
 from .security import decode_dev_token, new_user_id
+from .services.storage import public_url
 
 logger = logging.getLogger("routinery.auth")
 
@@ -196,6 +197,8 @@ def profile_payload(profile: Profile) -> dict:
             "elo_to_next": rank.elo_to_next,
         },
         "avatar_slug": profile.avatar_slug,
+        "avatar_url": public_url(profile.avatar_path) if profile.avatar_path else None,
+        "avatar_change_cost": AVATAR_CHANGE_COST,
         "theme_slug": profile.theme_slug,
         "streak": profile.streak,
         "best_streak": profile.best_streak,

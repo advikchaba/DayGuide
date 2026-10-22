@@ -16,6 +16,7 @@ create table if not exists profiles (
   coins             integer not null default 0,
   elo               integer not null default 100,
   avatar_slug       varchar(48) not null default 'spark',
+  avatar_path       varchar(300),                        -- uploaded profile picture object key
   theme_slug        varchar(48) not null default 'dark',
   streak            integer not null default 0,
   best_streak       integer not null default 0,
@@ -100,7 +101,7 @@ create table if not exists perfect_days (
 create table if not exists shop_items (
   slug        varchar(48) primary key,
   name        varchar(80) not null,
-  kind        varchar(16) not null,          -- theme | avatar
+  kind        varchar(16) not null,          -- theme (profile pictures are uploaded)
   description varchar(200) not null default '',
   price       integer not null default 0,
   rarity      varchar(16) not null default 'common',

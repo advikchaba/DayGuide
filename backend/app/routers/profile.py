@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_profile, profile_payload
 from ..config import settings
-from ..database import get_db
+from ..database import get_db, select_for_update
 from ..economy import (
+    AVATAR_CHANGE_COST,
     COINS_PER_TASK,
     LATE_ELO_MAX,
     LATE_ELO_MIN,
@@ -23,6 +24,7 @@ from ..economy import (
 from ..models import LedgerEntry, Profile, Proof, ShopItem
 from ..schemas import CosmeticRequest, LedgerOut, ProfileOut, UsernameRequest
 from ..serializers import serialize_proof
+from ..services.storage import delete_upload_image, save_avatar_image
 
 router = APIRouter(tags=["profile"])
 
@@ -122,6 +124,59 @@ def set_username(
     db.commit()
     db.refresh(profile)
     return profile_payload(profile)
+
+
+@router.post("/me/avatar/upload", response_model=ProfileOut)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Upload a custom profile picture. Each change costs coins."""
+    if profile.coins < AVATAR_CHANGE_COST:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Changing your profile picture costs {AVATAR_CHANGE_COST} coins. "
+                f"You have {profile.coins}."
+            ),
+        )
+
+    limit = settings.max_upload_bytes if settings.max_upload_bytes > 0 else 8 * 1024 * 1024
+    data = await file.read(limit + 1)
+    try:
+        avatar_path, _ = save_avatar_image(data, profile.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    locked = select_for_update(db.query(Profile).filter(Profile.id == profile.id), db).one()
+    if locked.coins < AVATAR_CHANGE_COST:
+        delete_upload_image(avatar_path)
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Changing your profile picture costs {AVATAR_CHANGE_COST} coins. "
+                f"You have {locked.coins}."
+            ),
+        )
+
+    previous_path = locked.avatar_path
+    apply_rewards(
+        db,
+        locked,
+        coins=-AVATAR_CHANGE_COST,
+        reason="Profile picture change",
+    )
+    locked.avatar_path = avatar_path
+    db.commit()
+    db.refresh(locked)
+
+    if previous_path and previous_path != avatar_path:
+        delete_upload_image(previous_path)
+
+    return profile_payload(locked)
 
 
 @router.post("/me/avatar", response_model=ProfileOut)

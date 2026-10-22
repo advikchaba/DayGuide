@@ -13,6 +13,7 @@ from ..models import Match, Profile, Proof
 from ..schemas import LeaderboardEntry, LeaderboardOut, ReviewRequest
 from ..serializers import serialize_match, serialize_proof
 from ..services.proofs import finalize_proof, unreward_proof
+from ..services.storage import public_url
 from ..services.vision import VerificationResult
 
 router = APIRouter(tags=["leaderboard"])
@@ -28,6 +29,7 @@ def _entry(position: int, profile: Profile, viewer_id: str) -> dict:
         "user_id": profile.id,
         "username": profile.username,
         "avatar_slug": profile.avatar_slug,
+        "avatar_url": public_url(profile.avatar_path) if profile.avatar_path else None,
         "elo": profile.elo,
         "rank_name": rank.name,
         "rank_color": rank.color,

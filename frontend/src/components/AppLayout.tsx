@@ -59,7 +59,7 @@ export function AppLayout() {
                   <CoinPill coins={profile.coins} className="hidden sm:inline-flex" />
                   <span className="hidden text-xs font-bold text-muted sm:inline">{profile.elo} ELO</span>
                   <Link to="/profile" className="focus-ring rounded-lg">
-                    <Avatar slug={profile.avatar_slug} size={38} />
+                    <Avatar slug={profile.avatar_slug} size={38} src={profile.avatar_url} />
                   </Link>
                   <Button variant="ghost" size="sm" onClick={handleSignOut} loading={busy} className="hidden md:inline-flex">
                     Sign out

@@ -19,6 +19,8 @@ export interface Profile {
   elo: number
   rank: RankInfo
   avatar_slug: string
+  avatar_url: string | null
+  avatar_change_cost: number
   theme_slug: string
   streak: number
   best_streak: number
@@ -108,6 +110,7 @@ export interface MatchPlayer {
   user_id: string
   username: string | null
   avatar_slug: string
+  avatar_url?: string | null
   rank_name: string
   elo: number
   progress: number
@@ -172,6 +175,7 @@ export interface LeaderboardEntry {
   user_id: string
   username: string | null
   avatar_slug: string
+  avatar_url: string | null
   elo: number
   rank_name: string
   rank_color: string

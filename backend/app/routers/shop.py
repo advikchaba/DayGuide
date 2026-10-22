@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_profile, profile_payload
@@ -13,20 +13,20 @@ from ..schemas import ProfileOut, ShopOut
 
 router = APIRouter(prefix="/shop", tags=["shop"])
 
-VALID_KINDS = ("theme", "avatar")
 
-
-def shop_payload(db: Session, profile: Profile, kind: str | None = None) -> dict:
-    """Build the shop listing for one user (ownership + equipped flags)."""
-    query = db.query(ShopItem)
-    if kind in VALID_KINDS:
-        query = query.filter(ShopItem.kind == kind)
-    items = query.order_by(ShopItem.kind.asc(), ShopItem.sort_order.asc(), ShopItem.price.asc()).all()
+def shop_payload(db: Session, profile: Profile) -> dict:
+    """Build the theme shop listing for one user (ownership + equipped flags)."""
+    items = (
+        db.query(ShopItem)
+        .filter(ShopItem.kind == "theme")
+        .order_by(ShopItem.sort_order.asc(), ShopItem.price.asc())
+        .all()
+    )
 
     owned = {purchase.item_slug for purchase in profile.purchases}
     payload = []
     for item in items:
-        equipped = profile.theme_slug == item.slug if item.kind == "theme" else profile.avatar_slug == item.slug
+        equipped = profile.theme_slug == item.slug
         payload.append(
             {
                 "slug": item.slug,
@@ -47,11 +47,10 @@ def shop_payload(db: Session, profile: Profile, kind: str | None = None) -> dict
 
 @router.get("", response_model=ShopOut)
 def list_shop(
-    kind: str | None = Query(default=None, pattern="^(theme|avatar)$"),
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
-    return shop_payload(db, profile, kind)
+    return shop_payload(db, profile)
 
 
 @router.post("/{slug}/buy", response_model=ShopOut)
@@ -61,7 +60,7 @@ def buy_item(
     db: Session = Depends(get_db),
 ) -> dict:
     item = db.get(ShopItem, slug)
-    if not item:
+    if not item or item.kind != "theme":
         raise HTTPException(status_code=404, detail="That item is not in the shop.")
 
     if item.is_free or any(purchase.item_slug == slug for purchase in profile.purchases):
@@ -78,11 +77,8 @@ def buy_item(
     apply_rewards(db, locked, coins=-item.price, reason=f"Unlocked {item.name}")
     db.add(Purchase(user_id=locked.id, item_slug=slug, price_paid=item.price))
 
-    # Cosmetics are auto-equipped the moment they are bought.
-    if item.kind == "theme":
-        locked.theme_slug = slug
-    else:
-        locked.avatar_slug = slug
+    # Themes are auto-equipped the moment they are bought.
+    locked.theme_slug = slug
 
     db.commit()
     db.refresh(locked)
@@ -95,19 +91,16 @@ def equip_item(
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Equip an owned (or free) cosmetic and return the updated profile."""
+    """Equip an owned (or free) theme and return the updated profile."""
     item = db.get(ShopItem, slug)
-    if not item:
+    if not item or item.kind != "theme":
         raise HTTPException(status_code=404, detail="That item is not in the shop.")
 
     owned = item.is_free or any(purchase.item_slug == slug for purchase in profile.purchases)
     if not owned:
         raise HTTPException(status_code=403, detail="You do not own this item yet.")
 
-    if item.kind == "theme":
-        profile.theme_slug = slug
-    else:
-        profile.avatar_slug = slug
+    profile.theme_slug = slug
 
     db.commit()
     db.refresh(profile)

@@ -110,6 +110,9 @@ def _migrate_existing_tables() -> None:
 
     statements: list[str] = []
 
+    if "profiles" in tables and "avatar_path" not in columns("profiles"):
+        statements.append("ALTER TABLE profiles ADD COLUMN avatar_path VARCHAR(300)")
+
     if "tasks" in tables and "scheduled_time" not in columns("tasks"):
         statements.append(
             "ALTER TABLE tasks ADD COLUMN scheduled_time VARCHAR(5) NOT NULL DEFAULT '09:00'"

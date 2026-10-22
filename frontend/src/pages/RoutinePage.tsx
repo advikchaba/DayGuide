@@ -162,7 +162,7 @@ export function RoutinePage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Avatar slug={profile?.avatar_slug} size={52} />
+              <Avatar slug={profile?.avatar_slug} size={52} src={profile?.avatar_url} />
               <div>
                 <p className="text-sm font-bold">{profile?.elo ?? 0} ELO</p>
                 <p className="mt-1 text-xs text-muted">Your rank lives on the ladder page.</p>

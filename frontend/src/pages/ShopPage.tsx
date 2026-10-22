@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Avatar, Badge, Button, Card, CoinPill, SectionTitle, Spinner } from '../components/ui'
+import { Badge, Button, Card, CoinPill, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
-import { getAvatar, getTheme } from '../lib/themes'
+import { getTheme } from '../lib/themes'
 import type { Profile, ShopItem, ShopPayload } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useTheme } from '../state/ThemeContext'
@@ -19,10 +18,6 @@ export function ShopPage() {
   const { setTheme } = useTheme()
   const { push } = useToast()
 
-  const [searchParams] = useSearchParams()
-  const [tab, setTab] = useState<'theme' | 'avatar'>(() =>
-    searchParams.get('tab') === 'avatar' ? 'avatar' : 'theme',
-  )
   const [shop, setShop] = useState<ShopPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [busySlug, setBusySlug] = useState<string | null>(null)
@@ -46,7 +41,7 @@ export function ShopPage() {
     try {
       const updated = await api.post<ShopPayload>(`/shop/${item.slug}/buy`)
       setShop(updated)
-      if (item.kind === 'theme') setTheme(item.slug)
+      setTheme(item.slug)
       push(`Unlocked ${item.name}.`, 'success')
       const me = await refresh()
       if (me) applyProfile(me)
@@ -69,15 +64,12 @@ export function ShopPage() {
               coins: me.coins,
               items: current.items.map((existing) => ({
                 ...existing,
-                equipped:
-                  existing.kind === item.kind
-                    ? existing.slug === item.slug
-                    : existing.equipped,
+                equipped: existing.slug === item.slug,
               })),
             }
           : current,
       )
-      if (item.kind === 'theme') setTheme(item.slug)
+      setTheme(item.slug)
       push(`${item.name} equipped.`, 'success')
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not equip that item.', 'error')
@@ -105,47 +97,28 @@ export function ShopPage() {
     )
   }
 
-  const items = shop.items.filter((item) => item.kind === tab)
-  const currentAvatar = getAvatar(profile?.avatar_slug)
+  const items = shop.items.filter((item) => item.kind === 'theme')
 
   return (
     <div className="space-y-6">
       <SectionTitle
         title="Shop"
-        subtitle="Spend your coins on themes and profile pictures. Starter pictures cost 100 coins; free items are already yours."
+        subtitle="Spend your coins on themes. Free themes are already yours. Upload a custom profile picture from your profile."
         action={<CoinPill coins={profile?.coins ?? shop.coins} />}
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        {(['theme', 'avatar'] as const).map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            onClick={() => setTab(kind)}
-            className={[
-              'focus-ring rounded-lg px-4 py-2 text-sm font-bold transition',
-              tab === kind ? 'bg-surface-2 text-ink' : 'bg-surface text-muted hover:text-ink',
-            ].join(' ')}
-          >
-            {kind === 'theme' ? 'Themes' : 'Profile pictures'}
-          </button>
-        ))}
-
-        {mode === 'dev' ? (
-          <Button variant="coin" size="sm" className="ml-auto" onClick={handleDevGrant}>
+      {mode === 'dev' ? (
+        <div className="flex justify-end">
+          <Button variant="coin" size="sm" onClick={handleDevGrant}>
             Dev: +10,000 coins
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
           const theme = getTheme(item.slug)
-          const avatar = getAvatar(item.slug)
-          const isEquipped =
-            item.kind === 'theme'
-              ? profile?.theme_slug === item.slug
-              : profile?.avatar_slug === item.slug
+          const isEquipped = profile?.theme_slug === item.slug
           const affordable = (profile?.coins ?? 0) >= item.price
           const primary = theme.vars['--accent'] ?? item.meta.accent ?? '#dcdcdc'
           const secondary = theme.vars['--accent-2'] ?? item.meta.accent2 ?? '#d3d3d3'
@@ -153,44 +126,28 @@ export function ShopPage() {
           return (
             <Card key={item.slug} className="flex flex-col gap-3">
               {/* Preview */}
-              {item.kind === 'theme' ? (
-                <div className="relative h-28 overflow-hidden rounded-lg" style={{ background: primary }}>
-                  {theme.image ? (
-                    <img
-                      src={theme.image}
-                      alt=""
-                      className="absolute inset-0 h-full w-full object-cover opacity-40"
-                      loading="lazy"
-                    />
-                  ) : null}
-                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-3">
-                    <span className="rounded bg-black/35 px-2 py-1 text-xs font-bold text-white">{theme.name}</span>
-                    <span className="flex gap-1" aria-hidden>
-                      <span className="h-6 w-6 rounded" style={{ background: primary }} />
-                      <span className="h-6 w-6 rounded" style={{ background: secondary }} />
-                    </span>
-                  </div>
-                  {isEquipped ? (
-                    <span className="absolute right-2 top-2">
-                      <Badge tone="success">equipped</Badge>
-                    </span>
-                  ) : null}
-                </div>
-              ) : (
-                <div
-                  className="relative grid h-28 place-items-center overflow-hidden rounded-lg"
-                  style={{ background: `color-mix(in srgb, ${avatar.accent} 20%, var(--surface-2))` }}
-                >
-                  <span className="text-3xl font-black" style={{ color: avatar.accent }}>
-                    {avatar.initials}
+              <div className="relative h-28 overflow-hidden rounded-lg" style={{ background: primary }}>
+                {theme.image ? (
+                  <img
+                    src={theme.image}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover opacity-40"
+                    loading="lazy"
+                  />
+                ) : null}
+                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-3">
+                  <span className="rounded bg-black/35 px-2 py-1 text-xs font-bold text-white">{theme.name}</span>
+                  <span className="flex gap-1" aria-hidden>
+                    <span className="h-6 w-6 rounded" style={{ background: primary }} />
+                    <span className="h-6 w-6 rounded" style={{ background: secondary }} />
                   </span>
-                  {isEquipped ? (
-                    <span className="absolute right-2 top-2">
-                      <Badge tone="success">equipped</Badge>
-                    </span>
-                  ) : null}
                 </div>
-              )}
+                {isEquipped ? (
+                  <span className="absolute right-2 top-2">
+                    <Badge tone="success">equipped</Badge>
+                  </span>
+                ) : null}
+              </div>
 
               <div className="flex-1">
                 <div className="flex items-center justify-between gap-2">
@@ -247,10 +204,7 @@ export function ShopPage() {
       </Card>
 
       {profile ? (
-        <div className="flex items-center gap-3 text-xs text-muted">
-          <Avatar slug={profile.avatar_slug} size={28} /> Currently using {getTheme(profile.theme_slug).name} and{' '}
-          {currentAvatar.name}
-        </div>
+        <p className="text-xs text-muted">Currently using {getTheme(profile.theme_slug).name}.</p>
       ) : null}
     </div>
   )

@@ -52,6 +52,7 @@ class Profile(Base):
     elo: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
 
     avatar_slug: Mapped[str] = mapped_column(String(48), default="spark", nullable=False)
+    avatar_path: Mapped[str | None] = mapped_column(String(300), nullable=True)
     theme_slug: Mapped[str] = mapped_column(String(48), default="dark", nullable=False)
 
     streak: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

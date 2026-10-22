@@ -1,8 +1,8 @@
 # Routinery — turn your daily routine into competitiveness
 
 A full-stack routine habit game: build a daily checklist with a time for every task, check in near
-that time to earn coins and ELO, spend the coins on themes and profile pictures, and climb a six-tier
-leaderboard based on timing accuracy.
+that time to earn coins and ELO, spend the coins on themes, upload your own profile picture, and climb
+a six-tier leaderboard based on timing accuracy.
 
 * **Frontend** — React 18 + TypeScript + Vite + Tailwind (dark by default, `#FFFFFF` text)
 * **Backend** — Python 3.12 + FastAPI + SQLAlchemy
@@ -50,7 +50,7 @@ SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_...  # browser-safe
 SUPABASE_SECRET_KEY=sb_secret_...            # server only, never in the frontend
 SUPABASE_JWT_SECRET=your-jwt-secret          # Project Settings → API → JWT Settings
-SUPABASE_STORAGE_BUCKET=proofs               # legacy; optional in the timing-only flow
+SUPABASE_STORAGE_BUCKET=proofs               # public bucket for profile pictures
 ```
 
 The legacy names `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` work too — either pair is
@@ -127,9 +127,9 @@ pays +200 coins (+5 per streak day, capped at +50).
 | Platinum | 1600 – 2000 |
 | Ruby | 2000 – 2400 |
 
-Prices: colour themes **10,000**, meme/image themes **20,000**, starter profile picture **100**,
-premium profile pictures **600**, light + dark themes free, first username free, later username
-changes **400** (taken names are refused).
+Prices: colour themes **10,000**, meme/image themes **20,000**, custom profile picture uploads
+**100 per change**, light + dark themes free, first username free, later username changes **400**
+(taken names are refused).
 Coins and ELO are only ever moved server-side (`backend/app/economy.py`), and every movement is
 written to `ledger_entries`. The reward stored on a completion is the *applied* delta, so reversing
 a task at the ELO floor cannot award free points.
@@ -143,12 +143,12 @@ a task at the ELO floor cannot award free points.
 | Landing | `/` | "Turn your daily routine into competitiveness" + sign up / login + tier ladder |
 | Sign up | `/signup` | Email, password, confirm password, optional username, Google OAuth button |
 | Log in | `/login` | Email + password, Google OAuth button, dev-provider notice |
-| Onboarding | `/onboarding` | Claim the free first username (live availability check) |
+| Onboarding | `/onboarding` | Claim the free first username (live availability check) + optional picture upload |
 | Routine | `/app` | Today's timed checklist, per-task timing rewards, streak + progress |
 | Builder | `/routines/new` | Name, templates, per-task time and coin value |
-| Shop | `/shop` | 13 themes + 19 avatars, buy/equip, affordability checks |
+| Shop | `/shop` | 13 themes, buy/equip, affordability checks (profile pictures are uploaded) |
 | Ladder | `/leaderboard` | Top 50 by ELO / coins / streak + your own position |
-| Profile | `/profile` | Stats, username change, coin/ELO ledger, timing rules |
+| Profile | `/profile` | Stats, username change, picture upload, coin/ELO ledger, timing rules |
 
 New accounts start with **no routine** and are sent straight to the builder after claiming a
 username.
@@ -169,7 +169,7 @@ backend/
     serializers.py     rows -> API payloads
     routers/           auth_dev, profile, routines, shop, leaderboard
     services/          storage and legacy verification helpers
-  tests/smoke_test.py  legacy API walkthrough (predates the timing system)
+  tests/smoke_test.py  end-to-end API smoke test (auth, timing, uploads, shop, ladder)
 frontend/
   src/lib/             supabase.ts, authClient.ts, api.ts, themes.ts, types.ts, time.ts
   src/state/           AuthContext, ThemeContext, ToastContext
@@ -184,6 +184,7 @@ supabase/schema.sql    the same schema as raw SQL
 ```
 GET    /me                      profile + rank + stats
 POST   /me/username             claim/change username (400 coins after the first)
+POST   /me/avatar/upload        upload a custom profile picture (100 coins per change)
 GET    /me/ledger               coin + ELO history
 GET    /routines                routines with today's completion state (?local_date=YYYY-MM-DD)
 POST   /routines                create a routine (tasks include scheduled_time)
@@ -248,7 +249,7 @@ browser bundle.
 | `SUPABASE_URL` | `https://YOUR-PROJECT.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (or `SUPABASE_ANON_KEY`) |
 | `SUPABASE_SECRET_KEY` | `sb_secret_...` (or `SUPABASE_SERVICE_ROLE_KEY`) |
-| `SUPABASE_STORAGE_BUCKET` | `proofs` (legacy storage bucket; unused by the timing flow) |
+| `SUPABASE_STORAGE_BUCKET` | `proofs` (public bucket used for uploaded profile pictures) |
 | `SUPABASE_JWT_SECRET` | Optional; blank verifies tokens against Supabase Auth |
 | `DEV_AUTH` | `false` |
 | `DEV_JWT_SECRET` | A long random string |
@@ -296,6 +297,7 @@ allowlist.
 | React app | Vercel service `frontend` |
 | FastAPI | Vercel service `backend` (`backend/`) |
 | Profiles, routines, tasks, coins, ELO | Supabase Postgres, or the private Supabase Storage SQLite fallback when `DATABASE_URL` is unset |
+| Uploaded profile pictures | Supabase Storage bucket (`SUPABASE_STORAGE_BUCKET`, under `avatars/`) |
 | Auth | Supabase Auth (email/password + Google) |
 
 ### Notes

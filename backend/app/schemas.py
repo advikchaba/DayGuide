@@ -45,6 +45,8 @@ class ProfileOut(BaseModel):
     elo: int
     rank: dict
     avatar_slug: str
+    avatar_url: str | None = None
+    avatar_change_cost: int
     theme_slug: str
     streak: int
     best_streak: int
@@ -229,6 +231,7 @@ class MatchPlayerOut(BaseModel):
     user_id: str
     username: str | None
     avatar_slug: str
+    avatar_url: str | None = None
     rank_name: str
     elo: int
     progress: int
@@ -274,6 +277,7 @@ class LeaderboardEntry(BaseModel):
     user_id: str
     username: str | None
     avatar_slug: str
+    avatar_url: str | None = None
     elo: int
     rank_name: str
     rank_color: str

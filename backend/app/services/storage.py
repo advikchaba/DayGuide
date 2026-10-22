@@ -177,20 +177,20 @@ def _upload_to_supabase(relative_path: str, data: bytes, mime: str) -> None:
 # --------------------------------------------------------------------------- #
 # Public API used by the routers
 # --------------------------------------------------------------------------- #
-def save_proof_image(data: bytes, user_id: str) -> tuple[str, str]:
+def save_upload_image(data: bytes, user_id: str, folder: str) -> tuple[str, str]:
     """Persist an uploaded image and return ``(relative_path, mime_type)``."""
     detected = detect_image_type(data)
     if not detected:
-        raise ValueError("Unsupported image format. Upload a JPEG, PNG or WebP photo.")
+        raise ValueError("Unsupported image format. Upload a JPEG, PNG or WebP image.")
 
     limit = settings.max_upload_bytes if settings.max_upload_bytes > 0 else MAX_UPLOAD_BYTES
     if len(data) > limit:
         limit_mb = max(1, round(limit / (1024 * 1024)))
-        raise ValueError(f"That photo is larger than {limit_mb} MB. Try a smaller one.")
+        raise ValueError(f"That image is larger than {limit_mb} MB. Try a smaller one.")
 
     extension, mime = detected
     filename = f"{user_id[:8]}-{uuid.uuid4().hex[:16]}.{extension}"
-    relative_path = f"proofs/{filename}"
+    relative_path = f"{folder}/{filename}"
 
     if settings.supabase_storage_configured:
         _upload_to_supabase(relative_path, data, mime)
@@ -201,14 +201,22 @@ def save_proof_image(data: bytes, user_id: str) -> tuple[str, str]:
             target.write_bytes(data)
         except OSError as exc:
             raise RuntimeError(
-                "Could not save the photo to local disk. Configure Supabase Storage "
+                "Could not save the image to local disk. Configure Supabase Storage "
                 "(SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY) for deployed environments."
             ) from exc
 
     return relative_path, mime
 
 
-def delete_proof_image(relative_path: str) -> None:
+def save_proof_image(data: bytes, user_id: str) -> tuple[str, str]:
+    return save_upload_image(data, user_id, "proofs")
+
+
+def save_avatar_image(data: bytes, user_id: str) -> tuple[str, str]:
+    return save_upload_image(data, user_id, "avatars")
+
+
+def delete_upload_image(relative_path: str) -> None:
     if settings.supabase_storage_configured:
         try:
             response = httpx.delete(

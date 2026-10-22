@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getAvatar } from '../lib/themes'
 import { RANK_TIERS, type RankInfo } from '../lib/types'
 
@@ -184,8 +184,38 @@ export function ProgressBar({
 /* -------------------------------------------------------------------------- */
 /* Identity chips                                                             */
 /* -------------------------------------------------------------------------- */
-export function Avatar({ slug, size = 40 }: { slug: string | null | undefined; size?: number }) {
+export function Avatar({
+  slug,
+  size = 40,
+  src,
+}: {
+  slug: string | null | undefined
+  size?: number
+  src?: string | null
+}) {
   const avatar = getAvatar(slug)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    setFailed(false)
+  }, [src])
+
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        title="Profile picture"
+        loading="lazy"
+        decoding="async"
+        draggable={false}
+        onError={() => setFailed(true)}
+        className="inline-block shrink-0 rounded-lg object-cover"
+        style={{ width: size, height: size }}
+      />
+    )
+  }
+
   return (
     <span
       className="inline-flex shrink-0 items-center justify-center rounded-lg text-center font-black"

@@ -9,8 +9,10 @@ Usage:
 
 from __future__ import annotations
 
+import base64
 import os
 import sys
+import tempfile
 import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -35,6 +37,7 @@ os.environ.update(
     SUPABASE_SERVICE_ROLE_KEY="",
     SUPABASE_SECRET_KEY="",
     SUPABASE_STORAGE_BUCKET="",
+    UPLOAD_DIR=str(Path(tempfile.gettempdir()) / f"routinery-test-uploads-{uuid.uuid4().hex[:8]}"),
 )
 
 from fastapi.testclient import TestClient  # noqa: E402
@@ -46,11 +49,15 @@ from app.config import settings  # noqa: E402
 settings.supabase_url = ""
 settings.supabase_anon_key = ""
 settings.supabase_publishable_key = ""
+settings.upload_dir = os.environ["UPLOAD_DIR"]
 
 from app.main import app  # noqa: E402
 
 PASSED: list[str] = []
 TODAY = date.today().isoformat()
+AVATAR_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+)
 
 
 def check(label: str, condition: bool, detail: object = "") -> None:
@@ -118,22 +125,25 @@ def main() -> None:
         blocked = client.post("/api/me/username", json={"username": "SomeoneElse"}, headers=headers)
         check("username change costs 400 coins", blocked.status_code == 400, blocked.text)
 
-        starter = next(
-            item
-            for item in client.get("/api/shop", headers=headers).json()["items"]
-            if item["kind"] == "avatar" and item["price"] == 100
+        uploaded = client.post(
+            "/api/me/avatar/upload",
+            headers=headers,
+            files={"file": ("pfp.png", AVATAR_PNG, "image/png")},
         )
-        changed = client.post(f"/api/shop/{starter['slug']}/buy", headers=headers)
-        changed_payload = changed.json() if changed.status_code == 200 else {}
-        changed_item = next(
-            (item for item in changed_payload.get("items", []) if item["slug"] == starter["slug"]),
-            {},
-        )
+        uploaded_payload = uploaded.json() if uploaded.status_code == 200 else {}
         check(
-            "new account can change profile picture",
-            changed.status_code == 200 and changed_payload.get("coins") == 0 and changed_item.get("equipped") is True,
-            changed.text,
+            "new account can upload a profile picture",
+            uploaded.status_code == 200
+            and uploaded_payload.get("coins") == 0
+            and bool(uploaded_payload.get("avatar_url")),
+            uploaded.text,
         )
+        blocked_upload = client.post(
+            "/api/me/avatar/upload",
+            headers=headers,
+            files={"file": ("pfp.png", AVATAR_PNG, "image/png")},
+        )
+        check("profile picture change costs 100 coins", blocked_upload.status_code == 400, blocked_upload.text)
 
         print("\n== timed routine ==")
         created = client.post(
@@ -203,16 +213,10 @@ def main() -> None:
         print("\n== shop ==")
         shop = client.get("/api/shop", headers=headers).json()
         themes = [item for item in shop["items"] if item["kind"] == "theme"]
-        avatars = [item for item in shop["items"] if item["kind"] == "avatar"]
         check("shop has 13 themes", len(themes) == 13, len(themes))
+        check("shop only sells themes", all(item["kind"] == "theme" for item in shop["items"]), shop["items"])
         check("colour themes cost 10k", all(t["price"] == 10_000 for t in themes if t["rarity"] == "rare"), themes)
         check("meme themes cost 20k", all(t["price"] == 20_000 for t in themes if t["rarity"] == "epic"), themes)
-        check("starter avatar costs 100", any(a["price"] == 100 for a in avatars if not a["is_free"]), avatars)
-        check(
-            "premium avatars cost 600",
-            all(a["price"] == 600 for a in avatars if not a["is_free"] and a["price"] != 100),
-            avatars,
-        )
         check("dark + light are free", {"dark", "light"} <= {t["slug"] for t in themes if t["is_free"]})
 
         poor = client.post("/api/shop/blue/buy", headers=headers)
@@ -227,17 +231,31 @@ def main() -> None:
             back.text,
         )
 
-        locked = client.post("/api/shop/flame/equip", headers=headers)
-        check("cannot equip unowned avatar", locked.status_code == 403, locked.text)
-
         granted = client.post("/api/auth/dev/grant", json={"coins": 40_000}, headers=headers).json()
         check("dev grant tops up the wallet", granted["coins"] >= 40_000, granted["coins"])
 
-        client.post("/api/shop/flame/buy", headers=headers)
-        me = client.get("/api/me", headers=headers).json()
-        check("avatar bought and auto-equipped", me["avatar_slug"] == "flame", me["avatar_slug"])
+        old_avatar_url = uploaded_payload["avatar_url"]
+        old_avatar_file = Path(settings.upload_dir) / old_avatar_url.split("/uploads/", 1)[1]
+        replacement = client.post(
+            "/api/me/avatar/upload",
+            headers=headers,
+            files={"file": ("pfp-2.png", AVATAR_PNG, "image/png")},
+        )
+        replacement_payload = replacement.json() if replacement.status_code == 200 else {}
+        check(
+            "profile picture can be replaced",
+            replacement.status_code == 200
+            and replacement_payload.get("avatar_url") != old_avatar_url,
+            replacement.text,
+        )
+        check(
+            "picture replacement charged 100 coins",
+            replacement_payload.get("coins") == granted["coins"] - 100,
+            replacement_payload.get("coins"),
+        )
+        check("old picture file deleted", not old_avatar_file.exists(), old_avatar_file)
 
-        coins_before = me["coins"]
+        coins_before = replacement_payload["coins"]
         client.post("/api/shop/blue/buy", headers=headers)
         me = client.get("/api/me", headers=headers).json()
         check("10k theme unlocked", me["theme_slug"] == "blue", me["theme_slug"])
@@ -254,6 +272,11 @@ def main() -> None:
         check("ladder populated", len(board["entries"]) >= 10, len(board["entries"]))
         check("elite player is Ruby", board["entries"][0]["rank_name"] == "Ruby", board["entries"][0])
         check("my row is included", board["you"] is not None and board["you"]["username"] == "TimingTina", board["you"])
+        check(
+            "uploaded picture appears on ladder",
+            board["you"] is not None and bool(board["you"].get("avatar_url")),
+            board["you"],
+        )
         check("sorted by ELO", board["entries"][0]["elo"] >= board["entries"][-1]["elo"])
         check(
             "race metric no longer advertised",
