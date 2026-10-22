@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, CoinPill, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { getAvatar, getTheme } from '../lib/themes'
@@ -18,7 +19,10 @@ export function ShopPage() {
   const { setTheme } = useTheme()
   const { push } = useToast()
 
-  const [tab, setTab] = useState<'theme' | 'avatar'>('theme')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState<'theme' | 'avatar'>(() =>
+    searchParams.get('tab') === 'avatar' ? 'avatar' : 'theme',
+  )
   const [shop, setShop] = useState<ShopPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [busySlug, setBusySlug] = useState<string | null>(null)
@@ -108,7 +112,7 @@ export function ShopPage() {
     <div className="space-y-6">
       <SectionTitle
         title="Shop"
-        subtitle="Spend your coins on themes and profile pictures. Free items are already yours."
+        subtitle="Spend your coins on themes and profile pictures. Starter pictures cost 100 coins; free items are already yours."
         action={<CoinPill coins={profile?.coins ?? shop.coins} />}
       />
 

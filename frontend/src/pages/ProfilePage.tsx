@@ -94,8 +94,8 @@ export function ProfilePage() {
             <Button variant="secondary" onClick={() => setUsernameModal(true)}>
               {isFirstUsername ? 'Claim username (free)' : 'Change username · 400 coins'}
             </Button>
-            <Link to="/shop">
-              <Button variant="secondary">Change look</Button>
+            <Link to="/shop?tab=avatar">
+              <Button variant="secondary">Change picture · from 100 coins</Button>
             </Link>
             <Link to="/leaderboard">
               <Button variant="ghost">View ladder</Button>

@@ -118,6 +118,23 @@ def main() -> None:
         blocked = client.post("/api/me/username", json={"username": "SomeoneElse"}, headers=headers)
         check("username change costs 400 coins", blocked.status_code == 400, blocked.text)
 
+        starter = next(
+            item
+            for item in client.get("/api/shop", headers=headers).json()["items"]
+            if item["kind"] == "avatar" and item["price"] == 100
+        )
+        changed = client.post(f"/api/shop/{starter['slug']}/buy", headers=headers)
+        changed_payload = changed.json() if changed.status_code == 200 else {}
+        changed_item = next(
+            (item for item in changed_payload.get("items", []) if item["slug"] == starter["slug"]),
+            {},
+        )
+        check(
+            "new account can change profile picture",
+            changed.status_code == 200 and changed_payload.get("coins") == 0 and changed_item.get("equipped") is True,
+            changed.text,
+        )
+
         print("\n== timed routine ==")
         created = client.post(
             "/api/routines",
@@ -190,7 +207,12 @@ def main() -> None:
         check("shop has 13 themes", len(themes) == 13, len(themes))
         check("colour themes cost 10k", all(t["price"] == 10_000 for t in themes if t["rarity"] == "rare"), themes)
         check("meme themes cost 20k", all(t["price"] == 20_000 for t in themes if t["rarity"] == "epic"), themes)
-        check("avatars cost 600", all(a["price"] == 600 for a in avatars if not a["is_free"]), avatars)
+        check("starter avatar costs 100", any(a["price"] == 100 for a in avatars if not a["is_free"]), avatars)
+        check(
+            "premium avatars cost 600",
+            all(a["price"] == 600 for a in avatars if not a["is_free"] and a["price"] != 100),
+            avatars,
+        )
         check("dark + light are free", {"dark", "light"} <= {t["slug"] for t in themes if t["is_free"]})
 
         poor = client.post("/api/shop/blue/buy", headers=headers)

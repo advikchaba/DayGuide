@@ -3,7 +3,8 @@
 Prices follow the product spec:
   * colour themes ......... 10,000 coins
   * image / meme themes ... 20,000 coins
-  * profile pictures ...... 600 coins
+  * starter profile pic ... 100 coins
+  * premium profile pics .. 600 coins
   * light + dark themes ... free defaults
 
 ``meta`` carries everything the frontend needs to render the cosmetic
@@ -15,6 +16,8 @@ from __future__ import annotations
 BASE_PRICE_THEME = 10_000
 BASE_PRICE_IMAGE_THEME = 20_000
 BASE_PRICE_AVATAR = 600
+STARTER_AVATAR_PRICE = 100
+STARTER_AVATAR_SLUG = "nova"
 
 # --- themes ----------------------------------------------------------------- #
 _THEMES: list[dict] = [
@@ -151,6 +154,7 @@ _THEMES: list[dict] = [
 # --- avatars ---------------------------------------------------------------- #
 _AVATARS: list[dict] = [
     ("spark", "Spark", "SP", "#7C5CFF", True),
+    ("nova", "Nova", "NV", "#2DD4BF", False),
     ("flame", "Flame", "FL", "#F97316", False),
     ("bolt", "Bolt", "BO", "#FACC15", False),
     ("waves", "Waves", "WV", "#38BDF8", False),
@@ -191,14 +195,15 @@ def build_catalog() -> list[dict]:
         )
 
     for order, (slug, name, initials, accent, free) in enumerate(_AVATARS):
+        is_starter = slug == STARTER_AVATAR_SLUG
         items.append(
             {
                 "slug": slug,
                 "name": name,
                 "kind": "avatar",
                 "description": f"{name} profile picture",
-                "price": 0 if free else BASE_PRICE_AVATAR,
-                "rarity": "common" if free else "rare",
+                "price": 0 if free else (STARTER_AVATAR_PRICE if is_starter else BASE_PRICE_AVATAR),
+                "rarity": "common" if free or is_starter else "rare",
                 "is_free": free,
                 "sort_order": order,
                 "meta": {"initials": initials, "accent": accent},

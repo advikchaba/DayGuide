@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AuthShell } from '../components/AuthShell'
 import { Avatar, Badge, Button, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
@@ -98,6 +98,12 @@ export function OnboardingPage() {
           <p className="text-xs text-muted">
             {preview.name} profile picture · {profile?.coins ?? 0} coins
           </p>
+          <Link
+            to="/shop?tab=avatar"
+            className="mt-1 inline-block text-xs font-semibold text-accent hover:underline"
+          >
+            Change picture · from 100 coins
+          </Link>
         </div>
       </div>
 

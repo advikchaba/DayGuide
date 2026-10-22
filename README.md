@@ -127,8 +127,9 @@ pays +200 coins (+5 per streak day, capped at +50).
 | Platinum | 1600 – 2000 |
 | Ruby | 2000 – 2400 |
 
-Prices: colour themes **10,000**, meme/image themes **20,000**, profile pictures **600**, light +
-dark themes free, first username free, later username changes **400** (taken names are refused).
+Prices: colour themes **10,000**, meme/image themes **20,000**, starter profile picture **100**,
+premium profile pictures **600**, light + dark themes free, first username free, later username
+changes **400** (taken names are refused).
 Coins and ELO are only ever moved server-side (`backend/app/economy.py`), and every movement is
 written to `ledger_entries`. The reward stored on a completion is the *applied* delta, so reversing
 a task at the ELO floor cannot award free points.
@@ -145,7 +146,7 @@ a task at the ELO floor cannot award free points.
 | Onboarding | `/onboarding` | Claim the free first username (live availability check) |
 | Routine | `/app` | Today's timed checklist, per-task timing rewards, streak + progress |
 | Builder | `/routines/new` | Name, templates, per-task time and coin value |
-| Shop | `/shop` | 13 themes + 18 avatars, buy/equip, affordability checks |
+| Shop | `/shop` | 13 themes + 19 avatars, buy/equip, affordability checks |
 | Ladder | `/leaderboard` | Top 50 by ELO / coins / streak + your own position |
 | Profile | `/profile` | Stats, username change, coin/ELO ledger, timing rules |
 

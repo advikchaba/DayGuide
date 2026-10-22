@@ -253,6 +253,7 @@ export interface AvatarDefinition {
 
 export const AVATARS: AvatarDefinition[] = [
   { slug: 'spark', name: 'Spark', initials: 'SP', accent: '#7C5CFF' },
+  { slug: 'nova', name: 'Nova', initials: 'NV', accent: '#2DD4BF' },
   { slug: 'flame', name: 'Flame', initials: 'FL', accent: '#F97316' },
   { slug: 'bolt', name: 'Bolt', initials: 'BO', accent: '#FACC15' },
   { slug: 'waves', name: 'Waves', initials: 'WV', accent: '#38BDF8' },

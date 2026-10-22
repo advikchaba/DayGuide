@@ -19,7 +19,7 @@ const FEATURES = [
   },
   {
     title: 'Spend it on your profile',
-    body: 'Colour themes from 10,000 coins, meme themes for 20,000, new profile pictures from 600. Look the part.',
+    body: 'Colour themes from 10,000 coins, meme themes for 20,000, and a new profile picture from 100. Look the part.',
   },
   {
     title: 'Build a streak',
