@@ -61,8 +61,11 @@ function Compare({
     case 'elo':
       text = `${difference > 0 ? '+' : ''}${Math.round(difference)} ELO`
       break
-    default:
-      text = `${difference > 0 ? '+' : ''}${Math.round(difference)}${suffix}`
+    default: {
+      const rounded = Math.round(difference)
+      const unit = Math.abs(rounded) === 1 ? suffix.replace(/s$/, '') : suffix
+      text = `${rounded > 0 ? '+' : ''}${rounded}${unit}`
+    }
   }
 
   const improved = invert ? difference < 0 : difference > 0
@@ -163,6 +166,7 @@ export function ReportsPage() {
             key={option.key}
             type="button"
             onClick={() => setRange(option.key)}
+            aria-label={option.label}
             aria-pressed={range === option.key}
             className={[
               'focus-ring rounded-lg px-3 py-2 text-sm font-bold transition',
