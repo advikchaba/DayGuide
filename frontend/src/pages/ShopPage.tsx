@@ -120,26 +120,51 @@ export function ShopPage() {
           const theme = getTheme(item.slug)
           const isEquipped = profile?.theme_slug === item.slug
           const affordable = (profile?.coins ?? 0) >= item.price
+          const background = theme.vars['--bg'] ?? item.meta.accent ?? '#101011'
+          const surface = theme.vars['--surface'] ?? '#1a1a1d'
           const primary = theme.vars['--accent'] ?? item.meta.accent ?? '#dcdcdc'
           const secondary = theme.vars['--accent-2'] ?? item.meta.accent2 ?? '#d3d3d3'
+          const swatches = [background, surface, primary, secondary]
 
           return (
             <Card key={item.slug} className="flex flex-col gap-3">
               {/* Preview */}
-              <div className="relative h-28 overflow-hidden rounded-lg" style={{ background: primary }}>
+              <div className="relative h-36 overflow-hidden rounded-lg" style={{ background }}>
                 {theme.image ? (
-                  <img
-                    src={theme.image}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover opacity-40"
-                    loading="lazy"
-                  />
-                ) : null}
+                  <>
+                    <img
+                      src={theme.image}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                      style={{ objectPosition: theme.imagePosition ?? 'center' }}
+                      loading="lazy"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 h-20 bg-black/55" aria-hidden />
+                  </>
+                ) : (
+                  <>
+                    <span className="absolute inset-y-0 left-0 w-2/3" style={{ background: surface }} aria-hidden />
+                    <span className="absolute inset-y-0 right-0 w-1/3" style={{ background: primary }} aria-hidden />
+                    <span
+                      className="absolute left-5 top-4 text-3xl font-black"
+                      style={{ color: theme.vars['--text'] }}
+                      aria-hidden
+                    >
+                      Aa
+                    </span>
+                    <span
+                      className="absolute bottom-6 left-5 h-1.5 w-16 rounded-full"
+                      style={{ background: secondary }}
+                      aria-hidden
+                    />
+                  </>
+                )}
                 <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-3">
-                  <span className="rounded bg-black/35 px-2 py-1 text-xs font-bold text-white">{theme.name}</span>
+                  <span className="rounded bg-black/55 px-2 py-1 text-xs font-bold text-white">{theme.name}</span>
                   <span className="flex gap-1" aria-hidden>
-                    <span className="h-6 w-6 rounded" style={{ background: primary }} />
-                    <span className="h-6 w-6 rounded" style={{ background: secondary }} />
+                    {swatches.map((color, index) => (
+                      <span key={`${item.slug}-${index}`} className="h-5 w-5 rounded" style={{ background: color }} />
+                    ))}
                   </span>
                 </div>
                 {isEquipped ? (
@@ -155,6 +180,11 @@ export function ShopPage() {
                   <Badge tone={RARITY_TONES[item.rarity]}>{item.rarity}</Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">{item.description}</p>
+                {theme.imageCredit ? (
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+                    Artwork: {theme.imageCredit}
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex items-center justify-between gap-2">

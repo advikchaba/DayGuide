@@ -18,6 +18,10 @@
   --accent-ink: #111111;
   --accent-soft: rgba(220, 220, 220, 0.1);
   --glow: transparent;
+  --hero-image: none;
+  --hero-image-opacity: 0.22;
+  --hero-image-position: center;
+  --hero-overlay: 0.76;
   color-scheme: dark;
 }
 
@@ -106,8 +110,8 @@
     pointer-events: none;
     background-image: var(--hero-image, none);
     background-size: cover;
-    background-position: center;
-    opacity: 0.22;
+    background-position: var(--hero-image-position, center);
+    opacity: var(--hero-image-opacity, 0.22);
   }
 
   .app-shell::after {
@@ -117,7 +121,7 @@
     z-index: 0;
     pointer-events: none;
     background: var(--bg);
-    opacity: 0.76;
+    opacity: var(--hero-overlay, 0.76);
   }
 
   .app-content {

@@ -13,41 +13,205 @@ export interface ThemeDefinition {
   price: number
   rarity: 'common' | 'rare' | 'epic'
   description: string
-  /** optional background art for image/meme themes */
+  /** optional artwork for image/meme themes */
   image?: string
+  imageAlt?: string
+  imagePosition?: string
+  imageCredit?: string
+  imageCreditUrl?: string
   vars: Record<string, string>
 }
 
-const darkVars = {
-  '--bg': '#101011',
-  '--bg-soft': '#17171a',
-  '--surface': '#1a1a1d',
-  '--surface-2': '#242427',
-  '--surface-solid': '#1d1d20',
-  '--border': 'transparent',
-  '--text': '#ffffff',
-  '--muted': '#a3a3a3',
-  '--accent': '#dcdcdc',
-  '--accent-2': '#d3d3d3',
-  '--accent-ink': '#111111',
-  '--accent-soft': 'rgba(220, 220, 220, 0.10)',
-  '--glow': 'transparent',
+interface ThemePalette {
+  bg: string
+  bgSoft: string
+  surface: string
+  surface2: string
+  surfaceSolid: string
+  text: string
+  muted: string
+  accent: string
+  accent2: string
+  accentInk?: string
+  accentSoft?: string
 }
 
-const lightVars = {
-  '--bg': '#f2f2f2',
-  '--bg-soft': '#ffffff',
-  '--surface': '#ffffff',
-  '--surface-2': '#e9e9e9',
-  '--surface-solid': '#ffffff',
-  '--border': 'transparent',
-  '--text': '#111111',
-  '--muted': '#808080',
-  '--accent': '#ffffff',
-  '--accent-2': '#808080',
-  '--accent-ink': '#111111',
-  '--accent-soft': 'rgba(0, 0, 0, 0.06)',
-  '--glow': 'transparent',
+const HERO_DEFAULTS = {
+  '--hero-image': 'none',
+  '--hero-image-opacity': '0.22',
+  '--hero-image-position': 'center',
+  '--hero-overlay': '0.76',
+}
+
+const darkPalette: ThemePalette = {
+  bg: '#101011',
+  bgSoft: '#17171a',
+  surface: '#1a1a1d',
+  surface2: '#242427',
+  surfaceSolid: '#1d1d20',
+  text: '#ffffff',
+  muted: '#a3a3a3',
+  accent: '#dcdcdc',
+  accent2: '#d3d3d3',
+  accentInk: '#111111',
+  accentSoft: 'rgba(220, 220, 220, 0.10)',
+}
+
+const lightPalette: ThemePalette = {
+  bg: '#f2f2f2',
+  bgSoft: '#ffffff',
+  surface: '#ffffff',
+  surface2: '#e9e9e9',
+  surfaceSolid: '#ffffff',
+  text: '#111111',
+  muted: '#808080',
+  accent: '#ffffff',
+  accent2: '#808080',
+  accentInk: '#111111',
+  accentSoft: 'rgba(0, 0, 0, 0.06)',
+}
+
+const bluePalette: ThemePalette = {
+  bg: '#07101f',
+  bgSoft: '#0a1626',
+  surface: '#0d1b2f',
+  surface2: '#152740',
+  surfaceSolid: '#101f35',
+  text: '#f3f7ff',
+  muted: '#98abc7',
+  accent: '#3b82f6',
+  accent2: '#93c5fd',
+  accentInk: '#ffffff',
+}
+
+const redPalette: ThemePalette = {
+  bg: '#150809',
+  bgSoft: '#1d0b0d',
+  surface: '#241012',
+  surface2: '#31171b',
+  surfaceSolid: '#291215',
+  text: '#fff6f6',
+  muted: '#c6a3a3',
+  accent: '#ef4444',
+  accent2: '#fca5a5',
+  accentInk: '#ffffff',
+}
+
+const greenPalette: ThemePalette = {
+  bg: '#06110a',
+  bgSoft: '#0a1a10',
+  surface: '#0d2014',
+  surface2: '#142f1d',
+  surfaceSolid: '#102518',
+  text: '#f2fff6',
+  muted: '#9cc0a8',
+  accent: '#22c55e',
+  accent2: '#86efac',
+  accentInk: '#05210f',
+}
+
+const pinkPalette: ThemePalette = {
+  bg: '#160910',
+  bgSoft: '#200d17',
+  surface: '#28101d',
+  surface2: '#351725',
+  surfaceSolid: '#2d1320',
+  text: '#fff5fa',
+  muted: '#d0a2b8',
+  accent: '#ec4899',
+  accent2: '#f9a8d4',
+  accentInk: '#ffffff',
+}
+
+const yellowPalette: ThemePalette = {
+  bg: '#141004',
+  bgSoft: '#1c1606',
+  surface: '#231c0a',
+  surface2: '#302612',
+  surfaceSolid: '#291f0c',
+  text: '#fffdf0',
+  muted: '#c9ba87',
+  accent: '#f59e0b',
+  accent2: '#fde68a',
+  accentInk: '#1b1302',
+}
+
+const purplePalette: ThemePalette = {
+  bg: '#100a1b',
+  bgSoft: '#171022',
+  surface: '#1b1229',
+  surface2: '#271a39',
+  surfaceSolid: '#201530',
+  text: '#faf7ff',
+  muted: '#b6a5cd',
+  accent: '#8b5cf6',
+  accent2: '#c4b5fd',
+  accentInk: '#ffffff',
+}
+
+const dogePalette: ThemePalette = {
+  bg: '#0a111b',
+  bgSoft: '#0e1724',
+  surface: '#111c2c',
+  surface2: '#1a2a40',
+  surfaceSolid: '#142134',
+  text: '#fffaf0',
+  muted: '#b7aa91',
+  accent: '#f59e0b',
+  accent2: '#fcd34d',
+  accentInk: '#1b1302',
+}
+
+const firePalette: ThemePalette = {
+  bg: '#140a06',
+  bgSoft: '#1d0f09',
+  surface: '#23130b',
+  surface2: '#301b0f',
+  surfaceSolid: '#28160d',
+  text: '#fff7f0',
+  muted: '#c8a18c',
+  accent: '#f97316',
+  accent2: '#fdba74',
+  accentInk: '#1e0d03',
+}
+
+const catPalette: ThemePalette = {
+  bg: '#150d11',
+  bgSoft: '#1e1319',
+  surface: '#25161d',
+  surface2: '#311f28',
+  surfaceSolid: '#2a1821',
+  text: '#fff7fa',
+  muted: '#c9a6b5',
+  accent: '#ec4899',
+  accent2: '#f9a8d4',
+  accentInk: '#ffffff',
+}
+
+const frogPalette: ThemePalette = {
+  bg: '#07130a',
+  bgSoft: '#0b1b10',
+  surface: '#0f2115',
+  surface2: '#17301f',
+  surfaceSolid: '#122719',
+  text: '#f4fff6',
+  muted: '#a0c2aa',
+  accent: '#22c55e',
+  accent2: '#86efac',
+  accentInk: '#06210f',
+}
+
+const clownPalette: ThemePalette = {
+  bg: '#150b0b',
+  bgSoft: '#1e1010',
+  surface: '#241313',
+  surface2: '#311b1b',
+  surfaceSolid: '#2a1717',
+  text: '#fff8f3',
+  muted: '#c9a7a0',
+  accent: '#ef4444',
+  accent2: '#fca5a5',
+  accentInk: '#ffffff',
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -59,19 +223,41 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-function darkVariant(accent: string, accent2: string): Record<string, string> {
+function paletteVars(palette: ThemePalette): Record<string, string> {
   return {
-    ...darkVars,
-    '--accent': accent,
-    '--accent-2': accent2,
-    '--accent-ink': '#ffffff',
-    '--accent-soft': hexToRgba(accent, 0.18),
+    ...HERO_DEFAULTS,
+    '--bg': palette.bg,
+    '--bg-soft': palette.bgSoft,
+    '--surface': palette.surface,
+    '--surface-2': palette.surface2,
+    '--surface-solid': palette.surfaceSolid,
+    '--border': 'transparent',
+    '--text': palette.text,
+    '--muted': palette.muted,
+    '--accent': palette.accent,
+    '--accent-2': palette.accent2,
+    '--accent-ink': palette.accentInk ?? '#111111',
+    '--accent-soft': palette.accentSoft ?? hexToRgba(palette.accent, 0.2),
+    '--glow': 'transparent',
   }
 }
 
-function imageVariant(accent: string, accent2: string, image: string): Record<string, string> {
-  return { ...darkVariant(accent, accent2), '--hero-image': `url("${image}")` }
+function imageVars(
+  palette: ThemePalette,
+  image: string,
+  imagePosition = 'center',
+): Record<string, string> {
+  return {
+    ...paletteVars(palette),
+    '--hero-image': `url("${image}")`,
+    '--hero-image-opacity': '1',
+    '--hero-image-position': imagePosition,
+    '--hero-overlay': '0.64',
+  }
 }
+
+const darkVars = paletteVars(darkPalette)
+const lightVars = paletteVars(lightPalette)
 
 export const THEMES: ThemeDefinition[] = [
   {
@@ -98,8 +284,8 @@ export const THEMES: ThemeDefinition[] = [
     isFree: false,
     price: 10_000,
     rarity: 'rare',
-    description: 'Deep blue with a pale blue counterpoint.',
-    vars: darkVariant('#1d4ed8', '#93c5fd'),
+    description: 'Deep navy surfaces with electric blue controls.',
+    vars: paletteVars(bluePalette),
   },
   {
     slug: 'red',
@@ -108,7 +294,7 @@ export const THEMES: ThemeDefinition[] = [
     price: 10_000,
     rarity: 'rare',
     description: 'For people who attack their checklist.',
-    vars: darkVariant('#b91c1c', '#fca5a5'),
+    vars: paletteVars(redPalette),
   },
   {
     slug: 'green',
@@ -117,7 +303,7 @@ export const THEMES: ThemeDefinition[] = [
     price: 10_000,
     rarity: 'rare',
     description: 'Fresh, focused and a little bit smug.',
-    vars: darkVariant('#15803d', '#86efac'),
+    vars: paletteVars(greenPalette),
   },
   {
     slug: 'pink',
@@ -125,8 +311,8 @@ export const THEMES: ThemeDefinition[] = [
     isFree: false,
     price: 10_000,
     rarity: 'rare',
-    description: 'Deep rose with a soft pink counterpoint.',
-    vars: darkVariant('#be185d', '#f9a8d4'),
+    description: 'Deep rose surfaces with a soft pink counterpoint.',
+    vars: paletteVars(pinkPalette),
   },
   {
     slug: 'yellow',
@@ -134,8 +320,8 @@ export const THEMES: ThemeDefinition[] = [
     isFree: false,
     price: 10_000,
     rarity: 'rare',
-    description: 'Warm ochre with a pale gold counterpoint.',
-    vars: darkVariant('#a16207', '#fde68a'),
+    description: 'Warm ochre surfaces with a pale gold counterpoint.',
+    vars: paletteVars(yellowPalette),
   },
   {
     slug: 'purple',
@@ -143,8 +329,8 @@ export const THEMES: ThemeDefinition[] = [
     isFree: false,
     price: 10_000,
     rarity: 'rare',
-    description: 'Deep violet with a pale lavender counterpoint.',
-    vars: darkVariant('#6d28d9', '#c4b5fd'),
+    description: 'Deep violet surfaces with a pale lavender counterpoint.',
+    vars: paletteVars(purplePalette),
   },
   {
     slug: 'meme-doge',
@@ -153,12 +339,12 @@ export const THEMES: ThemeDefinition[] = [
     price: 20_000,
     rarity: 'epic',
     description: 'Such routine. Very coins. Wow.',
-    image: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=1600&q=70',
-    vars: imageVariant(
-      '#b45309',
-      '#fcd34d',
-      'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=1600&q=70',
-    ),
+    image: '/theme-art/doge.jpg',
+    imageAlt: 'A dog in a yellow sweater against a blue background.',
+    imagePosition: 'center 45%',
+    imageCredit: 'Unsplash',
+    imageCreditUrl: 'https://unsplash.com/license',
+    vars: imageVars(dogePalette, '/theme-art/doge.jpg', 'center 45%'),
   },
   {
     slug: 'meme-thisisfine',
@@ -167,12 +353,12 @@ export const THEMES: ThemeDefinition[] = [
     price: 20_000,
     rarity: 'epic',
     description: 'Everything is on fire, but the checklist is done.',
-    image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=70',
-    vars: imageVariant(
-      '#c2410c',
-      '#fdba74',
-      'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=70',
-    ),
+    image: '/theme-art/thisisfine.jpg',
+    imageAlt: 'Close-up of orange flames.',
+    imagePosition: 'center',
+    imageCredit: 'MarcusObal / CC BY-SA 3.0',
+    imageCreditUrl: 'https://commons.wikimedia.org/wiki/File:FIRE_01.JPG',
+    vars: imageVars(firePalette, '/theme-art/thisisfine.jpg'),
   },
   {
     slug: 'meme-cat',
@@ -181,12 +367,12 @@ export const THEMES: ThemeDefinition[] = [
     price: 20_000,
     rarity: 'epic',
     description: 'Boss energy, nine lives, zero excuses.',
-    image: 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=1600&q=70',
-    vars: imageVariant(
-      '#be185d',
-      '#f9a8d4',
-      'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=1600&q=70',
-    ),
+    image: '/theme-art/cat.jpg',
+    imageAlt: 'A tabby cat resting on a pale sofa.',
+    imagePosition: 'center 42%',
+    imageCredit: 'Unsplash',
+    imageCreditUrl: 'https://unsplash.com/license',
+    vars: imageVars(catPalette, '/theme-art/cat.jpg', 'center 42%'),
   },
   {
     slug: 'meme-frog',
@@ -195,12 +381,12 @@ export const THEMES: ThemeDefinition[] = [
     price: 20_000,
     rarity: 'epic',
     description: 'Hop to it. Ribbit.',
-    image: 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=1600&q=70',
-    vars: imageVariant(
-      '#15803d',
-      '#86efac',
-      'https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=1600&q=70',
-    ),
+    image: '/theme-art/frog.jpg',
+    imageAlt: 'A green frog sitting among reeds in a pond.',
+    imagePosition: 'center 45%',
+    imageCredit: 'Dopibaj500 / CC0',
+    imageCreditUrl: 'https://commons.wikimedia.org/wiki/File:Close-up_of_a_green_frog_sitting_on_reeds_in_a_pond.jpg',
+    vars: imageVars(frogPalette, '/theme-art/frog.jpg', 'center 45%'),
   },
   {
     slug: 'meme-clown',
@@ -209,12 +395,12 @@ export const THEMES: ThemeDefinition[] = [
     price: 20_000,
     rarity: 'epic',
     description: 'For the days you skip leg day and log it anyway.',
-    image: 'https://images.unsplash.com/photo-1527261834078-9b37d35a4a32?auto=format&fit=crop&w=1600&q=70',
-    vars: imageVariant(
-      '#b91c1c',
-      '#fca5a5',
-      'https://images.unsplash.com/photo-1527261834078-9b37d35a4a32?auto=format&fit=crop&w=1600&q=70',
-    ),
+    image: '/theme-art/clown.jpg',
+    imageAlt: 'A clown with a red nose and a black hat.',
+    imagePosition: 'center 28%',
+    imageCredit: 'charliegolonkiewicz / CC BY 2.0',
+    imageCreditUrl: 'https://commons.wikimedia.org/wiki/File:Sad_Clown_-_Occupy_Wall_St.jpg',
+    vars: imageVars(clownPalette, '/theme-art/clown.jpg', 'center 28%'),
   },
 ]
 
@@ -233,9 +419,7 @@ export function applyTheme(slug: string | null | undefined): void {
   for (const [key, value] of Object.entries(theme.vars)) {
     root.style.setProperty(key, value)
   }
-  if (!theme.vars['--hero-image']) {
-    root.style.removeProperty('--hero-image')
-  }
+
   // Keeps form controls / scrollbars in the right colour mode.
   const isLight = theme.vars['--bg'] === lightVars['--bg']
   root.style.colorScheme = isLight ? 'light' : 'dark'

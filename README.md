@@ -129,7 +129,8 @@ pays +200 coins (+5 per streak day, capped at +50).
 
 Prices: colour themes **10,000**, meme/image themes **20,000**, custom profile picture uploads
 **100 per change**, light + dark themes free, first username free, later username changes **400**
-(taken names are refused).
+(taken names are refused). Colour themes repaint the full surface palette; image themes add a
+foreground artwork panel and a stronger page backdrop.
 Coins and ELO are only ever moved server-side (`backend/app/economy.py`), and every movement is
 written to `ledger_entries`. The reward stored on a completion is the *applied* delta, so reversing
 a task at the ELO floor cannot award free points.

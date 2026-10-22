@@ -4,6 +4,7 @@ import { useAuth } from '../state/AuthContext'
 import { useTheme } from '../state/ThemeContext'
 import { Avatar, Button, CoinPill } from './ui'
 import { Logo } from './Logo'
+import { ThemeBanner } from './ThemeBanner'
 
 const LINKS = [
   { to: '/app', label: 'Routine' },
@@ -100,6 +101,7 @@ export function AppLayout() {
         </header>
 
         <main className="mx-auto max-w-6xl px-4 py-6" data-theme-name={theme.name}>
+          <ThemeBanner theme={theme} />
           <Outlet />
         </main>
 
