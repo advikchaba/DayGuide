@@ -33,7 +33,7 @@ Open <http://localhost:5173>. Sign up with any email (e.g. `me@routinery.dev`) a
 
 * API docs: <http://localhost:8000/docs>
 * Health check: <http://localhost:8000/api/health>
-* Smoke test (legacy walkthrough from before the timing system): `cd backend && python tests/smoke_test.py`
+* Smoke test (timing rewards, 30-minute spacing, shop, ladder, reports): `cd backend && python tests/smoke_test.py`
 
 > The dev provider creates real password hashes and real JWTs, but it is meant for local use.
 > Set `DEV_AUTH=false` before you ship.
