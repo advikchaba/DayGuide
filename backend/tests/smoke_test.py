@@ -14,7 +14,7 @@ import os
 import sys
 import tempfile
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,10 +78,6 @@ def signup(client: TestClient, email: str, username: str | None = None) -> dict:
 
 def auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
-
-
-def minutes_ago(minutes: int) -> str:
-    return (datetime.now() - timedelta(minutes=minutes)).strftime("%H:%M")
 
 
 def main() -> None:
@@ -162,6 +158,69 @@ def main() -> None:
         first, second = [task["id"] for task in routine["tasks"]]
         check("scheduled times persisted", [t["scheduled_time"] for t in routine["tasks"]] == ["09:00", "10:00"], routine["tasks"])
 
+        print("\n== task spacing ==")
+        too_close = client.post(
+            "/api/routines",
+            headers=headers,
+            json={
+                "name": "Too Dense",
+                "tasks": [
+                    {"title": "Minute one", "scheduled_time": "12:15"},
+                    {"title": "Minute two", "scheduled_time": "12:30"},
+                ],
+            },
+        )
+        check("tasks under 30 minutes apart rejected", too_close.status_code == 400, too_close.text)
+
+        chained = client.post(
+            "/api/routines",
+            headers=headers,
+            json={
+                "name": "Midnight Dense",
+                "tasks": [
+                    {"title": "Late night", "scheduled_time": "23:50"},
+                    {"title": "Early morning", "scheduled_time": "00:10"},
+                ],
+            },
+        )
+        check("spacing wraps across midnight", chained.status_code == 400, chained.text)
+
+        too_close_add = client.post(
+            f"/api/routines/{routine['id']}/tasks",
+            headers=headers,
+            json={"title": "Squeezed in", "scheduled_time": "09:15"},
+        )
+        check("task too close to an existing task rejected", too_close_add.status_code == 400, too_close_add.text)
+
+        added = client.post(
+            f"/api/routines/{routine['id']}/tasks",
+            headers=headers,
+            json={"title": "Exactly thirty", "scheduled_time": "09:30"},
+        )
+        check("exactly 30 minutes apart accepted", added.status_code == 201, added.text)
+        added_task = next(task for task in added.json()["tasks"] if task["title"] == "Exactly thirty")
+
+        update_conflict = client.patch(
+            f"/api/tasks/{added_task['id']}",
+            headers=headers,
+            json={"title": "Exactly thirty", "scheduled_time": "09:15"},
+        )
+        check("updating a task into a conflict rejected", update_conflict.status_code == 400, update_conflict.text)
+
+        update_ok = client.patch(
+            f"/api/tasks/{added_task['id']}",
+            headers=headers,
+            json={"title": "Exactly thirty", "scheduled_time": "11:00"},
+        )
+        check("moving a task to a free slot accepted", update_ok.status_code == 200, update_ok.text)
+
+        cross_routine = client.post(
+            "/api/routines",
+            headers=headers,
+            json={"name": "Overlap", "tasks": [{"title": "Clash", "scheduled_time": "09:00"}]},
+        )
+        check("spacing applies across routines", cross_routine.status_code == 400, cross_routine.text)
+
         # Check the first task in at exactly its scheduled minute (zero diff).
         on_time = client.post(
             f"/api/tasks/{first}/complete",
@@ -193,13 +252,13 @@ def main() -> None:
         created = client.post(
             "/api/routines",
             headers=headers,
-            json={"name": "Perfect Day", "tasks": [{"title": "One task", "scheduled_time": minutes_ago(0)}]},
+            json={"name": "Perfect Day", "tasks": [{"title": "One task", "scheduled_time": "12:00"}]},
         ).json()
         task_id = created["tasks"][0]["id"]
         perfect = client.post(
             f"/api/tasks/{task_id}/complete",
             headers=headers,
-            json={"local_time": minutes_ago(0), "local_date": TODAY},
+            json={"local_time": "12:00", "local_date": TODAY},
         ).json()["reward"]
         check("perfect day awarded", perfect["perfect"] is True, perfect)
         check("perfect day pays 200 bonus coins", perfect["perfect_coins"] == 200, perfect)

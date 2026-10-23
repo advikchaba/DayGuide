@@ -15,8 +15,8 @@
   "startUrl": "/",
   "iconUrl": "https://routinery-advik-chaba.vercel.app/icons/icon-512.png",
   "maskableIconUrl": "https://routinery-advik-chaba.vercel.app/icons/maskable-512.png",
-  "appVersion": "1.0.0",
-  "appVersionCode": 1,
+  "appVersion": "1.0.1",
+  "appVersionCode": 2,
   "signingKey": {
     "path": "../keystore/routinery-upload.jks",
     "alias": "routinery"

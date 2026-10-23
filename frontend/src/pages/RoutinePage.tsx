@@ -2,9 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { TaskRow } from '../components/TaskRow'
 import { RewardBurst } from '../components/RewardBurst'
+import { ReminderSyncCard } from '../components/ReminderSyncCard'
 import { Avatar, Badge, Button, Card, CoinPill, EmptyState, ProgressBar, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
-import { localDateString, localTimeString, nextSlot } from '../lib/time'
+import {
+  findSpacingConflict,
+  localDateString,
+  localTimeString,
+  nextFreeSlot,
+  nextSlot,
+  spacingConflictMessage,
+} from '../lib/time'
 import type { Reward, Routine, Task, TaskCompleteResponse } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useToast } from '../state/ToastContext'
@@ -103,6 +111,15 @@ export function RoutinePage() {
     event.preventDefault()
     if (!active || !newTask.trim()) return
 
+    const conflict = findSpacingConflict(
+      routines.flatMap((routine) => routine.tasks),
+      newTaskTime,
+    )
+    if (conflict) {
+      push(spacingConflictMessage(newTaskTime, conflict), 'error')
+      return
+    }
+
     setAdding(true)
     try {
       const updated = await api.post<Routine>(
@@ -115,7 +132,13 @@ export function RoutinePage() {
       )
       replaceRoutine(updated)
       setNewTask('')
-      setNewTaskTime(nextSlot(updated.tasks.length * 30))
+      setNewTaskTime(
+        nextFreeSlot(
+          routines
+            .map((routine) => (routine.id === updated.id ? updated : routine))
+            .flatMap((routine) => routine.tasks),
+        ),
+      )
       push('Task added to today’s checklist.', 'success')
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not add that task.', 'error')
@@ -207,6 +230,8 @@ export function RoutinePage() {
         </Card>
       </div>
 
+      <ReminderSyncCard routines={routines} />
+
       {/* Routine switcher */}
       {routines.length > 1 ? (
         <div className="flex flex-wrap gap-2">
@@ -280,6 +305,9 @@ export function RoutinePage() {
               Add
             </Button>
           </form>
+          <p className="mt-2 text-xs text-muted">
+            Tasks need at least 30 minutes between scheduled times, across all of your routines.
+          </p>
         </section>
       ) : (
         <EmptyState

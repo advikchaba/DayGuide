@@ -57,8 +57,8 @@ android {
         applicationId "com.advikchaba.routinery"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 2
+        versionName "1.0.1"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -207,6 +207,7 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'androidx.core:core:1.13.1'
     
         implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.4'
     

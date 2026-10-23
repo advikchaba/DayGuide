@@ -1,7 +1,98 @@
 /** Local-clock helpers for scheduled task times. */
 
+const MINUTES_PER_DAY = 24 * 60
+
+/** Every task must sit at least this far from every other scheduled task. */
+export const MIN_TASK_GAP_MINUTES = 30
+
 function pad(value: number): string {
   return String(value).padStart(2, '0')
+}
+
+/** "18:30" -> minutes since midnight, or null when the value is not a valid time. */
+export function timeToMinutes(hhmm: string): number | null {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(hhmm)
+  if (!match) return null
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+/** Shortest gap between two wall-clock times, wrapping across midnight. */
+export function clockGapMinutes(first: string, second: string): number | null {
+  const firstMinutes = timeToMinutes(first)
+  const secondMinutes = timeToMinutes(second)
+  if (firstMinutes == null || secondMinutes == null) return null
+  const difference = Math.abs(firstMinutes - secondMinutes)
+  return Math.min(difference, MINUTES_PER_DAY - difference)
+}
+
+export interface SpacingTask {
+  id?: number
+  title: string
+  scheduled_time: string
+}
+
+/** The first task that is too close to `time`, ignoring `excludeId` when editing. */
+export function findSpacingConflict(
+  tasks: SpacingTask[],
+  time: string,
+  excludeId?: number,
+): SpacingTask | null {
+  for (const task of tasks) {
+    if (excludeId != null && task.id === excludeId) continue
+    const gap = clockGapMinutes(task.scheduled_time, time)
+    if (gap != null && gap < MIN_TASK_GAP_MINUTES) return task
+  }
+  return null
+}
+
+/** The first pair of tasks that break the minimum gap. */
+export function findPairwiseSpacingConflict(
+  tasks: SpacingTask[],
+): [SpacingTask, SpacingTask] | null {
+  for (let index = 0; index < tasks.length; index += 1) {
+    for (let otherIndex = index + 1; otherIndex < tasks.length; otherIndex += 1) {
+      const gap = clockGapMinutes(
+        tasks[index].scheduled_time,
+        tasks[otherIndex].scheduled_time,
+      )
+      if (gap != null && gap < MIN_TASK_GAP_MINUTES) {
+        return [tasks[index], tasks[otherIndex]]
+      }
+    }
+  }
+  return null
+}
+
+export function spacingConflictMessage(time: string, conflict: SpacingTask): string {
+  return `Tasks need at least ${MIN_TASK_GAP_MINUTES} minutes between them. ${formatTime(
+    time,
+  )} is too close to "${conflict.title}" at ${formatTime(conflict.scheduled_time)}.`
+}
+
+export function spacingPairMessage(first: SpacingTask, second: SpacingTask): string {
+  return `Tasks need at least ${MIN_TASK_GAP_MINUTES} minutes between them. "${first.title}" at ${formatTime(
+    first.scheduled_time,
+  )} is too close to "${second.title}" at ${formatTime(second.scheduled_time)}.`
+}
+
+/** The next half-hour slot that does not collide with any of the given tasks. */
+export function nextFreeSlot(tasks: SpacingTask[], start = new Date()): string {
+  const occupied = tasks
+    .map((task) => timeToMinutes(task.scheduled_time))
+    .filter((minutes): minutes is number => minutes != null)
+  const startSlot = Math.ceil((start.getHours() * 60 + start.getMinutes() + 1) / 30) * 30
+
+  for (let index = 0; index < MINUTES_PER_DAY / MIN_TASK_GAP_MINUTES; index += 1) {
+    const candidate = (startSlot + index * MIN_TASK_GAP_MINUTES) % MINUTES_PER_DAY
+    const free = occupied.every((minutes) => {
+      const difference = Math.abs(candidate - minutes)
+      return Math.min(difference, MINUTES_PER_DAY - difference) >= MIN_TASK_GAP_MINUTES
+    })
+    if (free) {
+      return `${pad(Math.floor(candidate / 60))}:${pad(candidate % 60)}`
+    }
+  }
+  return nextSlot()
 }
 
 /** YYYY-MM-DD in the browser's local timezone (not UTC). */

@@ -108,6 +108,10 @@ ELO is clamped to the published ladder floor/ceiling (100–2400). Un-ticking a 
 actual coins and ELO it granted. A **perfect day** requires every task to be checked in on time and
 pays +200 coins (+5 per streak day, capped at +50).
 
+Tasks must be at least **30 minutes apart**, measured on the daily clock (so `23:50` and `00:10`
+collide) and across every routine on the account. The API rejects new routines, added tasks, and
+retimed tasks that break the gap; the builder and quick-add form check it before submitting too.
+
 ---
 
 ## 4. Economy and ranks (exactly as specified)

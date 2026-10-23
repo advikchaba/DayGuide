@@ -24,6 +24,7 @@ public class Application extends android.app.Application {
   @Override
   public void onCreate() {
       super.onCreate();
-      
+      NotificationHelper.ensureChannel(this);
+      ReminderScheduler.rescheduleAll(this);
   }
 }

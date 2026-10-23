@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, CoinPill, Field, Modal, SectionTitle, Stat } from '../components/ui'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
+import { ReminderSyncCard } from '../components/ReminderSyncCard'
 import { api, ApiError } from '../lib/api'
+import { localDateString } from '../lib/time'
 import { getTheme } from '../lib/themes'
-import type { LedgerEntry, Profile } from '../lib/types'
+import type { LedgerEntry, Profile, Routine } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useTheme } from '../state/ThemeContext'
 import { useToast } from '../state/ToastContext'
@@ -15,6 +17,7 @@ export function ProfilePage() {
   const { push } = useToast()
 
   const [ledger, setLedger] = useState<LedgerEntry[]>([])
+  const [routines, setRoutines] = useState<Routine[]>([])
   const [usernameModal, setUsernameModal] = useState(false)
   const [newUsername, setNewUsername] = useState('')
   const [savingName, setSavingName] = useState(false)
@@ -22,8 +25,12 @@ export function ProfilePage() {
 
   const load = useCallback(async () => {
     try {
-      const ledgerRows = await api.get<LedgerEntry[]>('/me/ledger?limit=12')
+      const [ledgerRows, routineRows] = await Promise.all([
+        api.get<LedgerEntry[]>('/me/ledger?limit=12'),
+        api.get<Routine[]>(`/routines?local_date=${localDateString()}`),
+      ])
       setLedger(ledgerRows)
+      setRoutines(routineRows)
     } catch {
       /* non critical */
     }
@@ -134,6 +141,8 @@ export function ProfilePage() {
           </div>
         </Card>
       </div>
+
+      <ReminderSyncCard routines={routines} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
