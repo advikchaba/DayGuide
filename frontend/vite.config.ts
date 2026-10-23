@@ -1,8 +1,25 @@
-import { defineConfig } from 'vite'
+import { cpSync, existsSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const rootDir = dirname(fileURLToPath(import.meta.url))
+
+function copyWellKnown(): Plugin {
+  return {
+    name: 'copy-well-known',
+    closeBundle() {
+      const source = resolve(rootDir, 'public/.well-known')
+      if (existsSync(source)) {
+        cpSync(source, resolve(rootDir, 'dist/.well-known'), { recursive: true })
+      }
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), copyWellKnown()],
   server: {
     port: 5173,
     proxy: {

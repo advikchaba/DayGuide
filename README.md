@@ -179,6 +179,10 @@ frontend/
   src/pages/           Landing, Login, Signup, AuthCallback, Onboarding, Routine, Builder,
                        Shop, Leaderboard, Profile
 supabase/schema.sql    the same schema as raw SQL
+mobile/
+  android/             Bubblewrap TWA project (package com.advikchaba.routinery)
+  release/             signed release APK and Play Store AAB
+  README.md            Android build, signing, and Play Console notes
 ```
 
 ### API surface (all under `/api`)
@@ -313,3 +317,23 @@ allowlist.
 * The API creates tables, adds new columns to existing tables, and syncs the shop catalogue on each
   cold start; all operations are idempotent. Use the Session pooler so serverless instances do not
   exhaust Postgres connections.
+
+---
+
+## 8. Android app (Play Store)
+
+`mobile/` contains a Trusted Web Activity wrapper for the canonical production site. It opens the
+deployed app in Chrome and uses the same backend, auth, and data as the website.
+
+* Package: `com.advikchaba.routinery`
+* Version: `1.0.0` (version code `1`)
+* Signed APK: `mobile/release/routinery-1.0.0-release.apk`
+* Play Store bundle: `mobile/release/routinery-1.0.0-release.aab`
+
+The Digital Asset Links file is deployed at
+`https://routinery-advik-chaba.vercel.app/.well-known/assetlinks.json`. If Google Play App Signing
+uses a different app signing certificate, add that SHA-256 fingerprint to
+`frontend/public/.well-known/assetlinks.json` and redeploy before testing the Play-signed build.
+
+See [`mobile/README.md`](mobile/README.md) for signing-key custody, rebuild steps, and the Play
+Console checklist.

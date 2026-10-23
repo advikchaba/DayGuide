@@ -25,3 +25,7 @@ frontend/.vite/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Android wrapper, artifacts, and signing material
+# They are built locally and are not part of the Vercel deployment.
+mobile/
