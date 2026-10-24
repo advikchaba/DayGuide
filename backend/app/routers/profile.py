@@ -207,6 +207,7 @@ def read_config() -> dict:
         "supabase_anon_key": settings.supabase_public_key,
         "supabase_configured": settings.supabase_configured,
         "dev_auth": settings.dev_auth_enabled,
+        "admin_configured": bool(settings.admin_email_set),
         "ranks": [
             {
                 "name": rank.name,
