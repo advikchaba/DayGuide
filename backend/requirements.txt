@@ -4,7 +4,7 @@ sqlalchemy==2.0.36
 pydantic==2.10.4
 pydantic-settings==2.7.0
 email-validator==2.2.0
-PyJWT==2.10.1
+PyJWT==2.15.0
 httpx==0.28.1
 python-multipart==0.0.20
 # Postgres driver - only needed when DATABASE_URL points at Supabase Postgres
