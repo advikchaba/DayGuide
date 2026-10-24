@@ -240,6 +240,17 @@ Set `ADMIN_EMAILS` to a comma-separated list of real account emails. Those accou
 `is_admin` flag on `/me` and an **Admin** navigation link. Every administrator route is also
 checked server-side; a hidden button is never the access control.
 
+Administrators can also be marked in Supabase Auth with server-controlled metadata:
+
+```json
+{ "app_metadata": { "role": "admin" } }
+```
+
+Set that with the Auth Admin API using the service-role key, never from the browser. The role is
+read from the verified access token (or the GoTrue `/user` response), so `user_metadata` cannot
+grant it. Changing or removing the role takes effect on the next token refresh or sign-in. The
+`ADMIN_EMAILS` allowlist remains useful as a bootstrap if no account has the Supabase role yet.
+
 The dashboard at `/admin` lists and searches every profile. Opening an account exposes coin/ELO
 grants and absolute sets, report windows, editable routines and tasks, free shop-item grants, item
 removal, the ledger, and account deletion. Coin changes write ledger entries. Coin sets cannot go
@@ -251,6 +262,8 @@ the local profile and its related rows. That frees the email for a new registrat
 deletion rather than leaving a half-deleted account. Deleted auth ids are tombstoned locally so an
 unexpired old access token cannot recreate the profile. If you delete an administrator, remove their
 email from `ADMIN_EMAILS` first; otherwise signing up again with that email restores admin access.
+Deleting a Supabase-role administrator also deletes the role with the auth identity, so a new account
+with the same email starts as a normal user.
 
 ---
 

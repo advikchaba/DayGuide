@@ -14,6 +14,7 @@ import {
   loadAuthConfig,
   onAuthChange,
   getAuthToken,
+  refreshAuthSession,
   signInWithEmail as authSignIn,
   signInWithGoogle as authGoogle,
   signOut as authSignOut,
@@ -27,6 +28,7 @@ interface AuthContextValue {
   loading: boolean
   mode: AuthMode
   refresh: () => Promise<Profile | null>
+  refreshSession: () => Promise<Profile | null>
   applyProfile: (profile: Profile) => void
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, username?: string) => Promise<{ needsEmailConfirmation: boolean }>
@@ -58,6 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null
     }
   }, [])
+
+  const refreshSession = useCallback(async (): Promise<Profile | null> => {
+    await refreshAuthSession()
+    return refresh()
+  }, [refresh])
 
   useEffect(() => {
     mounted.current = true
@@ -114,13 +121,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       mode: mode ?? getAuthMode(),
       refresh,
+      refreshSession,
       applyProfile: (next: Profile) => setProfile(next),
       signIn,
       signUp,
       signInWithGoogle,
       signOut,
     }),
-    [profile, loading, mode, refresh, signIn, signUp, signInWithGoogle, signOut],
+    [profile, loading, mode, refresh, refreshSession, signIn, signUp, signInWithGoogle, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

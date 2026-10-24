@@ -43,6 +43,20 @@ class Identity:
     user_id: str
     email: str
     provider: str
+    is_admin: bool = False
+
+
+def _admin_claim(payload: dict) -> bool:
+    """Read the server-controlled admin role from a Supabase token.
+
+    ``app_metadata`` is writable only with the service-role key, unlike
+    ``user_metadata`` which the signed-in user can edit themselves.
+    """
+    app_metadata = payload.get("app_metadata") or {}
+    if not isinstance(app_metadata, dict):
+        return False
+    role = str(app_metadata.get("role") or "").strip().lower()
+    return role in {"admin", "administrator"} or app_metadata.get("is_admin") is True
 
 
 # --------------------------------------------------------------------------- #
@@ -84,20 +98,34 @@ def _verify_with_gotrue(token: str) -> dict | None:
     if response.status_code != 200:
         return None
     payload = response.json()
-    return {"sub": payload.get("id"), "email": payload.get("email")}
+    return {
+        "sub": payload.get("id"),
+        "email": payload.get("email"),
+        "app_metadata": payload.get("app_metadata") or {},
+    }
 
 
 def resolve_identity(token: str) -> Identity:
     if settings.dev_auth_enabled:
         payload = decode_dev_token(token)
         if payload:
-            return Identity(user_id=payload["sub"], email=payload.get("email", ""), provider="dev")
+            return Identity(
+                user_id=payload["sub"],
+                email=payload.get("email", ""),
+                provider="dev",
+                is_admin=payload.get("admin") is True,
+            )
 
     payload = _verify_with_secret(token) or _verify_with_gotrue(token)
     if not payload or not payload.get("sub"):
         raise AuthError("Invalid or expired session. Please sign in again.")
 
-    return Identity(user_id=payload["sub"], email=payload.get("email") or "", provider="supabase")
+    return Identity(
+        user_id=payload["sub"],
+        email=payload.get("email") or "",
+        provider="supabase",
+        is_admin=_admin_claim(payload),
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -168,7 +196,12 @@ def get_current_profile(
     db: Session = Depends(get_db),
 ) -> Profile:
     identity = resolve_identity(_extract_token(authorization))
-    return provision_profile(db, identity)
+    profile = provision_profile(db, identity)
+    # Keep the verified token claim on the request's profile instance. This is
+    # deliberately not a mutable profile column: revoking the Supabase role
+    # takes effect on the next request/token refresh.
+    setattr(profile, "_admin_claim", identity.is_admin)
+    return profile
 
 
 def get_current_user_id(profile: Profile = Depends(get_current_profile)) -> str:
@@ -176,6 +209,8 @@ def get_current_user_id(profile: Profile = Depends(get_current_profile)) -> str:
 
 
 def is_admin_profile(profile: Profile) -> bool:
+    if getattr(profile, "_admin_claim", False):
+        return True
     admins = settings.admin_email_set
     return bool(admins and (profile.email or "").lower() in admins)
 

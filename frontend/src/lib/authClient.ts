@@ -11,6 +11,7 @@ import {
   onSupabaseAuthStateChange,
   signInWithEmail as supabaseSignIn,
   signInWithGoogle as supabaseGoogle,
+  refreshSupabaseSession,
   signOutSupabase,
   signUpWithEmail as supabaseSignUp,
 } from './supabase'
@@ -189,6 +190,15 @@ export async function signOut(): Promise<void> {
     await signOutSupabase()
   }
   storeDevToken(null)
+}
+
+export async function refreshAuthSession(): Promise<void> {
+  await loadAuthConfig()
+  if (mode === 'supabase') {
+    await refreshSupabaseSession()
+    return
+  }
+  // Local dev tokens are already trusted; re-reading the profile is enough.
 }
 
 export async function getAuthToken(): Promise<string | null> {

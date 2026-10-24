@@ -14,8 +14,10 @@ import os
 import sys
 import tempfile
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+
+import jwt
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -55,6 +57,7 @@ settings.supabase_publishable_key = ""
 settings.admin_emails = ADMIN_EMAIL
 settings.upload_dir = os.environ["UPLOAD_DIR"]
 
+from app.auth import _admin_claim  # noqa: E402
 from app.main import app  # noqa: E402
 
 PASSED: list[str] = []
@@ -94,6 +97,14 @@ def main() -> None:
         check("rank ladder exposed", len(config["ranks"]) == 6, config["ranks"])
         check("perfect routine pays 200 coins", config["economics"]["perfect_routine_coins"] == 200)
         check("timing window is 20 minutes", config["economics"]["on_time_window_minutes"] == 20)
+        check(
+            "server-controlled app_metadata can grant admin",
+            _admin_claim({"app_metadata": {"role": "admin"}}),
+        )
+        check(
+            "user metadata cannot grant admin",
+            not _admin_claim({"user_metadata": {"role": "admin"}}),
+        )
 
         print("\n== auth ==")
         email = f"player-{uuid.uuid4().hex[:8]}@routinery.dev"
@@ -783,6 +794,71 @@ def main() -> None:
             ).json()["username"]
             is None,
         )
+
+        print("\n== supabase metadata administration ==")
+        # Exercise the production token path without contacting Supabase: a
+        # locally signed token with the same audience/claims shape is enough.
+        original_supabase = (
+            settings.supabase_url,
+            settings.supabase_anon_key,
+            settings.supabase_jwt_secret,
+        )
+        settings.supabase_url = "https://example.supabase.co"
+        settings.supabase_anon_key = "test-anon-key"
+        settings.supabase_jwt_secret = "test-jwt-secret-with-32-bytes-minimum"
+        try:
+            now = datetime.now(timezone.utc)
+
+            def supabase_token(app_metadata: dict | None = None) -> str:
+                payload = {
+                    "sub": str(uuid.uuid4()),
+                    "email": f"metadata-{uuid.uuid4().hex[:8]}@dayguide.dev",
+                    "aud": settings.supabase_jwt_audience,
+                    "role": "authenticated",
+                    "app_metadata": app_metadata or {},
+                    "iat": int(now.timestamp()),
+                    "exp": int((now + timedelta(hours=1)).timestamp()),
+                }
+                return jwt.encode(payload, settings.supabase_jwt_secret, algorithm="HS256")
+
+            metadata_admin_token = supabase_token({"role": "admin"})
+            metadata_admin = client.get(
+                "/api/me", headers=auth(metadata_admin_token)
+            )
+            check(
+                "Supabase app_metadata role reaches the profile",
+                metadata_admin.status_code == 200
+                and metadata_admin.json().get("is_admin") is True,
+                metadata_admin.text,
+            )
+            check(
+                "Supabase app_metadata admin can use admin routes",
+                client.get(
+                    "/api/admin/users", headers=auth(metadata_admin_token)
+                ).status_code
+                == 200,
+            )
+
+            plain_token = supabase_token()
+            plain = client.get("/api/me", headers=auth(plain_token))
+            check(
+                "Supabase tokens without the admin role stay ordinary",
+                plain.status_code == 200 and plain.json().get("is_admin") is False,
+                plain.text,
+            )
+            check(
+                "Supabase tokens without the admin role are refused admin routes",
+                client.get(
+                    "/api/admin/users", headers=auth(plain_token)
+                ).status_code
+                == 403,
+            )
+        finally:
+            (
+                settings.supabase_url,
+                settings.supabase_anon_key,
+                settings.supabase_jwt_secret,
+            ) = original_supabase
 
         print(f"\nAll {len(PASSED)} checks passed.")
 

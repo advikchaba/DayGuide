@@ -158,6 +158,13 @@ export async function signOutSupabase(): Promise<void> {
   await client.auth.signOut()
 }
 
+/** Re-issue the access token so server-side role changes take effect now. */
+export async function refreshSupabaseSession(): Promise<void> {
+  if (!client) return
+  const { error } = await client.auth.refreshSession()
+  if (error) throw new Error(error.message)
+}
+
 export function onSupabaseAuthStateChange(
   handler: (session: AuthSession | null, event: string) => void,
 ): () => void {

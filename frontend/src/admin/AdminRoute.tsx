@@ -12,7 +12,27 @@ interface AdminConfig {
 
 function AdminAccessPage({ email }: { email: string }) {
   const navigate = useNavigate()
+  const { refreshSession } = useAuth()
   const [adminConfigured, setAdminConfigured] = useState<boolean | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    setRefreshError(null)
+    try {
+      const next = await refreshSession()
+      if (!next?.is_admin) {
+        setRefreshError(
+          'This account still has no administrator role. Ask the site owner to grant it, then refresh again.',
+        )
+      }
+    } catch (error) {
+      setRefreshError(error instanceof Error ? error.message : 'Could not refresh the session.')
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -33,23 +53,24 @@ function AdminAccessPage({ email }: { email: string }) {
     <div className="mx-auto max-w-2xl space-y-5">
       <SectionTitle
         title="Administrator access required"
-        subtitle="The administration dashboard is limited to accounts allowlisted by the API."
+        subtitle="The administration dashboard is limited to accounts approved by the API."
         action={<Badge tone="danger">Not authorised</Badge>}
       />
 
       <Card className="space-y-4">
         <p className="text-sm text-muted">
-          You are signed in as <strong className="text-ink">{email}</strong>. This account is not on
-          the administrator list, so the server will not expose account, economy, routine, report or
-          shop controls.
+          You are signed in as <strong className="text-ink">{email}</strong>. This account does not
+          have an administrator role, so the server will not expose account, economy, routine,
+          report or shop controls.
         </p>
 
         {adminConfigured === false ? (
           <div className="glass-2 space-y-2 p-4">
-            <p className="text-sm font-bold">No administrator is configured on this deployment.</p>
+            <p className="text-sm font-bold">No email allowlist is configured on this deployment.</p>
             <p className="text-sm text-muted">
-              On Vercel, open the DayGuide backend service settings and add this environment
-              variable, then redeploy:
+              The owner can either add this email to the API&apos;s comma-separated{' '}
+              <code>ADMIN_EMAILS</code> variable and redeploy, or grant this Supabase account the
+              server-controlled <code>app_metadata.role = &quot;admin&quot;</code> role.
             </p>
             <code className="block overflow-x-auto rounded-lg bg-surface-2 px-3 py-2 text-xs text-ink">
               ADMIN_EMAILS={email}
@@ -59,22 +80,34 @@ function AdminAccessPage({ email }: { email: string }) {
 
         {adminConfigured === true ? (
           <div className="glass-2 space-y-2 p-4">
-            <p className="text-sm font-bold">Administrator access is configured.</p>
+            <p className="text-sm font-bold">An email allowlist is configured.</p>
             <p className="text-sm text-muted">
-              Ask the site owner to add <strong className="text-ink">{email}</strong> to the
-              comma-separated <code>ADMIN_EMAILS</code> API variable, then sign out and back in.
+              This account is not on it. Ask the owner to add{' '}
+              <strong className="text-ink">{email}</strong>, or to grant the Supabase administrator
+              role, then choose Refresh access.
             </p>
           </div>
         ) : null}
 
+        {refreshError ? (
+          <p className="text-sm font-bold text-danger" role="alert">
+            {refreshError}
+          </p>
+        ) : null}
+
         <p className="text-xs text-muted">
-          Changing <code>ADMIN_EMAILS</code> requires a new backend deployment. The frontend guard is
-          only a convenience; every administrator route is checked again on the server.
+          Administrator access is checked again on every API request. Refreshing a session picks up
+          a newly granted role without waiting for the token to expire.
         </p>
 
-        <Button type="button" onClick={() => navigate('/app')}>
-          Back to routine
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" loading={refreshing} onClick={handleRefresh}>
+            Refresh access
+          </Button>
+          <Button type="button" onClick={() => navigate('/app')}>
+            Back to routine
+          </Button>
+        </div>
       </Card>
     </div>
   )
