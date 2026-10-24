@@ -231,9 +231,10 @@ frontend calls `/api` same-origin — no backend URL, CORS setup, or `VITE_API_U
 ### Create or convert the project
 
 The canonical production domain is `https://dayguide-advik-chaba.vercel.app`. The older
-`routinery-advik-chaba.vercel.app` and `routinery-sigma.vercel.app` hosts redirect to it so browsers
-keep one login session. If you are converting an existing frontend project, keep the domain and
-Supabase redirect URLs aligned:
+`routinery-advik-chaba.vercel.app` and `routinery-sigma.vercel.app` hosts redirect to it, so there is
+one canonical login origin. Browser sessions are origin-scoped, so users may need to sign in once on
+the new host. If you are converting an existing frontend project, keep the domain and Supabase
+redirect URLs aligned:
 
 1. Open the project → **Settings → General**.
 2. Set **Root Directory** to the repository root (`.`), not `frontend` or `backend`.
