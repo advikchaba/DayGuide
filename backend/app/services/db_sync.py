@@ -175,7 +175,7 @@ def restore(path: Path | None = None) -> bool:
 
     _ensure_bucket()
     try:
-        response = httpx.get(_object_url(), headers=_headers(), timeout=60.0)
+        response = httpx.get(_object_url(), headers=_headers(), timeout=20.0)
     except httpx.HTTPError as exc:
         raise RuntimeError(f"Could not download the stored database: {exc}") from exc
 
@@ -276,7 +276,7 @@ def upload(path: Path | None = None, *, force: bool = False) -> bool:
                     "x-upsert": "true",
                 },
                 content=data,
-                timeout=60.0,
+                timeout=20.0,
             )
         except httpx.HTTPError as exc:
             raise RuntimeError(f"Could not upload the database snapshot: {exc}") from exc
