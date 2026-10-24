@@ -113,7 +113,6 @@ def resolve_identity(token: str) -> Identity:
                 user_id=payload["sub"],
                 email=payload.get("email", ""),
                 provider="dev",
-                is_admin=payload.get("admin") is True,
             )
 
     payload = _verify_with_secret(token) or _verify_with_gotrue(token)
