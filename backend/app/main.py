@@ -7,6 +7,7 @@ Run locally:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -31,8 +32,10 @@ async def lifespan(_app: FastAPI):
     create_all()
     with SessionLocal() as db:
         run_seed(db)
-    # Persist the freshly created/migrated/seed database before serving.
-    db_sync.upload(force=True)
+    # Persist only if create_all/run_seed actually changed the file. A forced
+    # upload here could overwrite a newer snapshot written by another warm
+    # instance between our restore and startup.
+    db_sync.upload()
     if settings.is_serverless and settings.is_sqlite and not db_sync.enabled():
         logger.warning(
             "Serverless SQLite has no durable persistence. Set DATABASE_URL "
@@ -65,21 +68,48 @@ app.add_middleware(
 )
 
 
+_active_requests = 0
+_refresh_lock = asyncio.Lock()
+
+
 @app.middleware("http")
 async def persist_sqlite_database(request: Request, call_next):
-    """Mirror the serverless SQLite file after any request that changed it.
+    """Keep the serverless SQLite file in sync with Supabase Storage.
 
-    Reads are cheap: ``upload`` compares the file's mtime and returns without a
-    network call when nothing wrote to the database. That matters because
-    ``GET /api/me`` can provision a profile on first login.
+    Each warm Vercel instance has its own ``/tmp`` copy. Without a check before
+    a request, an instance that restored an older snapshot on cold start would
+    keep serving (and eventually uploading) stale rows. That made changes like
+    a username update appear to vanish depending on which instance answered.
+
+    The refresh only runs for the sole in-flight request and holds the lock
+    while it replaces the file, so a request cannot open a session halfway
+    through a restore. Other requests wait briefly for the check, then proceed
+    against the refreshed copy. After the response, changes are uploaded as
+    before; ``upload`` is a cheap no-op when nothing wrote.
     """
-    response = await call_next(request)
-    if db_sync.enabled():
-        try:
-            await run_in_threadpool(db_sync.upload)
-        except Exception:
-            logger.exception("Could not persist the SQLite database to Supabase Storage")
-    return response
+    global _active_requests
+
+    async with _refresh_lock:
+        _active_requests += 1
+        is_first_request = _active_requests == 1
+        if is_first_request and db_sync.enabled():
+            try:
+                await run_in_threadpool(db_sync.refresh_if_stale)
+            except Exception:
+                logger.exception("Could not refresh the SQLite database from Supabase Storage")
+
+    try:
+        response = await call_next(request)
+
+        if db_sync.enabled():
+            try:
+                await run_in_threadpool(db_sync.upload)
+            except Exception:
+                logger.exception("Could not persist the SQLite database to Supabase Storage")
+        return response
+    finally:
+        async with _refresh_lock:
+            _active_requests -= 1
 
 
 # Proof photos are served straight from disk in development. On Vercel the

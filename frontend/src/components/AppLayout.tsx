@@ -60,7 +60,16 @@ export function AppLayout() {
                 <>
                   <CoinPill coins={profile.coins} className="hidden sm:inline-flex" />
                   <span className="hidden text-xs font-bold text-muted sm:inline">{profile.elo} ELO</span>
-                  <Link to="/profile" className="focus-ring rounded-lg">
+                  {profile.username ? (
+                    <Link
+                      to="/profile"
+                      className="focus-ring inline-block max-w-[8rem] truncate rounded-lg px-1 align-middle text-xs font-bold text-muted hover:text-ink"
+                      title={`Signed in as @${profile.username}`}
+                    >
+                      @{profile.username}
+                    </Link>
+                  ) : null}
+                  <Link to="/profile" className="focus-ring rounded-lg" title={profile.username ? `@${profile.username}` : 'Profile'}>
                     <Avatar slug={profile.avatar_slug} size={38} src={profile.avatar_url} />
                   </Link>
                   <Button variant="ghost" size="sm" onClick={handleSignOut} loading={busy} className="hidden md:inline-flex">

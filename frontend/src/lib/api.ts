@@ -49,6 +49,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const response = await fetch(`${API_BASE}/api${path}`, {
     method,
     headers,
+    // Profiles and ladders are personalised; never let a browser or CDN
+    // replay an older authenticated response after a username change.
+    cache: 'no-store',
     body: formData ?? (json !== undefined ? JSON.stringify(json) : undefined),
   })
 

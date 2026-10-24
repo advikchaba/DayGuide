@@ -406,6 +406,51 @@ def main() -> None:
             client.get("/api/reports", params={"range": "week"}).status_code == 401,
         )
 
+        print("\n== paid username change ==")
+        before = client.get("/api/me", headers=headers).json()
+        changed = client.post(
+            "/api/me/username", json={"username": "TimingTinaTwo"}, headers=headers
+        )
+        changed_payload = changed.json() if changed.status_code == 200 else {}
+        check(
+            "paid username change succeeds",
+            changed.status_code == 200 and changed_payload.get("username") == "TimingTinaTwo",
+            changed.text,
+        )
+        check(
+            "paid username change charges 400 coins",
+            changed_payload.get("coins") == before["coins"] - 400,
+            changed_payload,
+        )
+        check(
+            "paid username change increments the change count",
+            changed_payload.get("username_changes") == 1,
+            changed_payload,
+        )
+        persisted = client.get("/api/me", headers=headers).json()
+        check(
+            "paid username change persists on the next read",
+            persisted.get("username") == "TimingTinaTwo",
+            persisted,
+        )
+        board = client.get("/api/leaderboard", headers=headers).json()
+        check(
+            "ladder shows the new username",
+            board["you"] is not None and board["you"]["username"] == "TimingTinaTwo",
+            board["you"],
+        )
+        again = client.post(
+            "/api/me/username", json={"username": "TimingTinaTwo"}, headers=headers
+        )
+        again_payload = again.json() if again.status_code == 200 else {}
+        check(
+            "re-submitting the same username is a no-op",
+            again.status_code == 200
+            and again_payload.get("coins") == changed_payload.get("coins")
+            and again_payload.get("username_changes") == 1,
+            again.text,
+        )
+
         print(f"\nAll {len(PASSED)} checks passed.")
 
 

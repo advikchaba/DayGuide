@@ -16,6 +16,7 @@ import os
 import sqlite3
 import tempfile
 import threading
+import time
 from pathlib import Path
 from urllib.parse import quote
 
@@ -31,6 +32,8 @@ RUNTIME_DB_PATH = Path("/tmp/routinery.db")
 
 _lock = threading.Lock()
 _last_uploaded_stamp: int | None = None
+_last_remote_version: str | None = None
+_last_version_check: float = 0.0
 _bucket_ready = False
 
 
@@ -134,6 +137,35 @@ def _upload_url() -> str:
     )
 
 
+def _response_version(response: httpx.Response) -> str | None:
+    """A stable token for the stored snapshot, changed by every upload."""
+    return response.headers.get("etag") or response.headers.get("last-modified")
+
+
+def _remote_version() -> str | None:
+    """Read the version of the snapshot currently in storage without downloading it.
+
+    Supabase Storage supports ``HEAD`` on private objects, so a warm Vercel
+    instance can cheaply detect that another instance has uploaded a newer
+    database. ``ETag`` is preferred; ``Last-Modified`` is the fallback.
+    """
+    try:
+        response = httpx.head(_object_url(), headers=_headers(), timeout=5.0)
+    except httpx.HTTPError as exc:
+        logger.warning("Could not check the stored database version: %s", exc)
+        return None
+
+    if response.status_code == 200:
+        return _response_version(response)
+    if response.status_code not in {400, 404}:
+        logger.warning(
+            "Could not check the stored database version (%s): %s",
+            response.status_code,
+            response.text[:200],
+        )
+    return None
+
+
 def restore(path: Path | None = None) -> bool:
     """Download the last snapshot into ``path``. Missing object = fresh start."""
     if path is None:
@@ -150,8 +182,10 @@ def restore(path: Path | None = None) -> bool:
     if response.status_code == 200:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(response.content)
-        global _last_uploaded_stamp
+        global _last_uploaded_stamp, _last_remote_version, _last_version_check
         _last_uploaded_stamp = path.stat().st_mtime_ns
+        _last_remote_version = _response_version(response)
+        _last_version_check = time.monotonic()
         logger.info("Restored SQLite database from Supabase Storage (%d bytes)", len(response.content))
         return True
 
@@ -163,6 +197,39 @@ def restore(path: Path | None = None) -> bool:
         f"Could not download the stored database ({response.status_code}): "
         f"{response.text[:300]}"
     )
+
+
+def refresh_if_stale(path: Path | None = None) -> bool:
+    """Pull the stored snapshot when another instance has written since this one.
+
+    A warm serverless instance otherwise keeps serving the copy it restored on
+    cold start forever, so a username change written by another instance can
+    appear to vanish. The caller must only invoke this while no other request
+    is in flight: the local file is replaced wholesale, so it is safe only when
+    there are no unuploaded local writes and no open sessions.
+    """
+    if path is None:
+        path = RUNTIME_DB_PATH
+    if not enabled() or not path.is_file():
+        return False
+
+    global _last_version_check
+    now = time.monotonic()
+    # A tiny cache avoids a HEAD on every asset-like burst while still making
+    # cross-instance changes visible almost immediately.
+    if now - _last_version_check < 1.0:
+        return False
+
+    # Never overwrite writes that have not reached storage yet.
+    if _last_uploaded_stamp is not None and path.stat().st_mtime_ns != _last_uploaded_stamp:
+        return False
+
+    version = _remote_version()
+    _last_version_check = now
+    if not version or version == _last_remote_version:
+        return False
+
+    return restore(path)
 
 
 def _snapshot(path: Path) -> bytes:
@@ -191,7 +258,7 @@ def upload(path: Path | None = None, *, force: bool = False) -> bool:
     if not enabled() or not path.is_file():
         return False
 
-    global _last_uploaded_stamp
+    global _last_uploaded_stamp, _last_remote_version, _last_version_check
     stamp = path.stat().st_mtime_ns
     if not force and stamp == _last_uploaded_stamp:
         return False
@@ -221,5 +288,7 @@ def upload(path: Path | None = None, *, force: bool = False) -> bool:
             )
 
     _last_uploaded_stamp = stamp
+    _last_remote_version = _response_version(response) or _remote_version()
+    _last_version_check = time.monotonic()
     logger.info("Persisted SQLite database to Supabase Storage (%d bytes)", len(data))
     return True

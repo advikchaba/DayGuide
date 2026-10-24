@@ -22,6 +22,8 @@ export function ProfilePage() {
   const [newUsername, setNewUsername] = useState('')
   const [savingName, setSavingName] = useState(false)
   const [nameError, setNameError] = useState<string | null>(null)
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [checkingUsername, setCheckingUsername] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -40,6 +42,46 @@ export function ProfilePage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (!usernameModal) {
+      setNewUsername('')
+      setNameError(null)
+      setUsernameAvailable(null)
+      setCheckingUsername(false)
+      return
+    }
+
+    const candidate = newUsername.trim()
+    setUsernameAvailable(null)
+    setCheckingUsername(false)
+    if (
+      !/^[A-Za-z0-9_.]{3,20}$/.test(candidate) ||
+      candidate === profile?.username
+    ) {
+      return
+    }
+
+    let cancelled = false
+    setCheckingUsername(true)
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await api.public<{ available: boolean }>(
+          `/usernames/available?username=${encodeURIComponent(candidate)}`,
+        )
+        if (!cancelled) setUsernameAvailable(result.available)
+      } catch {
+        if (!cancelled) setUsernameAvailable(null)
+      } finally {
+        if (!cancelled) setCheckingUsername(false)
+      }
+    }, 350)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [newUsername, usernameModal, profile?.username])
+
   if (!profile) return null
 
   const theme = getTheme(profile.theme_slug)
@@ -49,21 +91,35 @@ export function ProfilePage() {
     event.preventDefault()
     setNameError(null)
 
-    if (!/^[A-Za-z0-9_.]{3,20}$/.test(newUsername)) {
+    const candidate = newUsername.trim()
+    if (!/^[A-Za-z0-9_.]{3,20}$/.test(candidate)) {
       setNameError('3–20 characters: letters, numbers, dot or underscore.')
+      return
+    }
+    if (candidate === profile.username) {
+      setNameError('That is already your username.')
+      return
+    }
+    if (usernameAvailable === false) {
+      setNameError('That username is already taken.')
       return
     }
 
     setSavingName(true)
     try {
-      const updated = await api.post<Profile>('/me/username', { username: newUsername })
+      const updated = await api.post<Profile>('/me/username', { username: candidate })
+      const didChange = updated.username !== profile.username
       applyProfile(updated)
       setUsernameModal(false)
       setNewUsername('')
-      push(
-        isFirstUsername ? `@${updated.username} is yours.` : `Username changed — 400 coins spent.`,
-        'success',
-      )
+      if (didChange) {
+        push(
+          isFirstUsername ? `@${updated.username} is yours.` : `Username changed — 400 coins spent.`,
+          'success',
+        )
+      } else {
+        push('That is already your username.', 'info')
+      }
     } catch (error) {
       setNameError(error instanceof ApiError ? error.detail : 'Could not change your username.')
     } finally {
@@ -201,11 +257,35 @@ export function ProfilePage() {
             maxLength={20}
             autoFocus
           />
+          {!nameError && newUsername.trim() !== profile.username ? (
+            <p
+              className={[
+                'text-xs font-medium',
+                usernameAvailable === false
+                  ? 'text-rose-300'
+                  : usernameAvailable === true
+                    ? 'text-emerald-300'
+                    : 'text-muted',
+              ].join(' ')}
+            >
+              {checkingUsername
+                ? 'Checking availability…'
+                : usernameAvailable === false
+                  ? 'That username is already taken.'
+                  : usernameAvailable === true
+                    ? 'That username is available.'
+                    : ''}
+            </p>
+          ) : null}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setUsernameModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" loading={savingName} disabled={!newUsername.trim()}>
+            <Button
+              type="submit"
+              loading={savingName}
+              disabled={!newUsername.trim() || usernameAvailable === false || newUsername.trim() === profile.username}
+            >
               {isFirstUsername ? 'Claim it' : 'Pay 400 coins and change'}
             </Button>
           </div>
