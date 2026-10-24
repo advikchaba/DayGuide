@@ -22,117 +22,9 @@ from ..economy import (
 from ..models import Profile, Routine, Task, TaskCompletion
 from ..schemas import CompletionIn, RoutineIn, RoutineUpdate, TaskCompleteOut, TaskIn
 from ..serializers import serialize_routine
+from ..services.routines import ensure_task_spacing, get_owned_routine, get_owned_task
 
 router = APIRouter(tags=["routines"])
-
-MIN_TASK_GAP_MINUTES = 30
-_MINUTES_PER_DAY = 24 * 60
-
-
-# --------------------------------------------------------------------------- #
-# Helpers
-# --------------------------------------------------------------------------- #
-def _minutes_since_midnight(hhmm: str) -> int | None:
-    try:
-        hours, minutes = hhmm.split(":")
-        hour = int(hours)
-        minute = int(minutes)
-    except (AttributeError, ValueError):
-        return None
-    if not (0 <= hour <= 23 and 0 <= minute <= 59):
-        return None
-    return hour * 60 + minute
-
-
-def _clock_gap_minutes(first: str, second: str) -> int | None:
-    """Shortest gap between two wall-clock times, wrapping across midnight."""
-    first_minutes = _minutes_since_midnight(first)
-    second_minutes = _minutes_since_midnight(second)
-    if first_minutes is None or second_minutes is None:
-        return None
-    difference = abs(first_minutes - second_minutes)
-    return min(difference, _MINUTES_PER_DAY - difference)
-
-
-def _raise_task_spacing_error(
-    new_task: TaskIn,
-    other_title: str,
-    other_time: str,
-    other_routine: str | None = None,
-) -> None:
-    location = f" in '{other_routine}'" if other_routine else ""
-    raise HTTPException(
-        status_code=400,
-        detail=(
-            f"Tasks need at least {MIN_TASK_GAP_MINUTES} minutes between them. "
-            f"'{new_task.title.strip()}' at {new_task.scheduled_time} is too close to "
-            f"'{other_title}' at {other_time}{location}."
-        ),
-    )
-
-
-def _ensure_task_spacing(
-    db: Session,
-    user_id: str,
-    new_tasks: list[TaskIn],
-    *,
-    exclude_task_id: int | None = None,
-) -> None:
-    """Reject schedules that would put any two of a user's tasks under 30 min apart.
-
-    The check spans every routine, so a user cannot dodge it by splitting
-    minute-by-minute tasks across several routines.
-    """
-    existing = (
-        db.query(Task, Routine)
-        .join(Routine, Routine.id == Task.routine_id)
-        .filter(Routine.user_id == user_id)
-        .all()
-    )
-
-    for new_task in new_tasks:
-        for existing_task, existing_routine in existing:
-            if existing_task.id == exclude_task_id:
-                continue
-            existing_time = existing_task.scheduled_time or "09:00"
-            gap = _clock_gap_minutes(new_task.scheduled_time, existing_time)
-            if gap is not None and gap < MIN_TASK_GAP_MINUTES:
-                _raise_task_spacing_error(
-                    new_task,
-                    existing_task.title,
-                    existing_time,
-                    existing_routine.name,
-                )
-
-    for index, new_task in enumerate(new_tasks):
-        for other in new_tasks[:index]:
-            gap = _clock_gap_minutes(new_task.scheduled_time, other.scheduled_time)
-            if gap is not None and gap < MIN_TASK_GAP_MINUTES:
-                _raise_task_spacing_error(new_task, other.title, other.scheduled_time)
-
-
-def _own_routine(db: Session, routine_id: int, user_id: str) -> Routine:
-    routine = (
-        db.query(Routine)
-        .filter(Routine.id == routine_id, Routine.user_id == user_id)
-        .one_or_none()
-    )
-    if not routine:
-        raise HTTPException(status_code=404, detail="Routine not found.")
-    return routine
-
-
-def _own_task(db: Session, task_id: int, user_id: str) -> tuple[Task, Routine]:
-    row = (
-        db.query(Task, Routine)
-        .join(Routine, Routine.id == Task.routine_id)
-        .filter(Task.id == task_id, Routine.user_id == user_id)
-        .one_or_none()
-    )
-    if not row:
-        raise HTTPException(status_code=404, detail="Task not found.")
-    task, routine = row
-    return task, routine
 
 
 def _reward_payload(reward: DayReward, profile: Profile) -> dict:
@@ -176,7 +68,7 @@ def create_routine(
     if not payload.tasks:
         raise HTTPException(status_code=400, detail="Add at least one task to your routine.")
 
-    _ensure_task_spacing(db, profile.id, payload.tasks)
+    ensure_task_spacing(db, profile.id, payload.tasks)
 
     routine = Routine(user_id=profile.id, name=payload.name.strip(), emoji=payload.emoji or "")
     db.add(routine)
@@ -206,7 +98,7 @@ def update_routine(
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
-    routine = _own_routine(db, routine_id, profile.id)
+    routine = get_owned_routine(db, routine_id, profile.id)
     if payload.name is not None:
         routine.name = payload.name.strip()
     if payload.emoji is not None:
@@ -222,7 +114,7 @@ def delete_routine(
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> Response:
-    routine = _own_routine(db, routine_id, profile.id)
+    routine = get_owned_routine(db, routine_id, profile.id)
     db.delete(routine)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -239,8 +131,8 @@ def add_task(
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
-    routine = _own_routine(db, routine_id, profile.id)
-    _ensure_task_spacing(db, profile.id, [payload])
+    routine = get_owned_routine(db, routine_id, profile.id)
+    ensure_task_spacing(db, profile.id, [payload])
     position = max((task.position for task in routine.tasks), default=-1) + 1
     db.add(
         Task(
@@ -266,9 +158,9 @@ def update_task(
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
-    task, routine = _own_task(db, task_id, profile.id)
+    task, routine = get_owned_task(db, task_id, profile.id)
     if payload.scheduled_time != task.scheduled_time:
-        _ensure_task_spacing(db, profile.id, [payload], exclude_task_id=task.id)
+        ensure_task_spacing(db, profile.id, [payload], exclude_task_id=task.id)
     task.title = payload.title.strip()
     task.note = payload.note
     task.requires_proof = False
@@ -301,7 +193,7 @@ def complete_task(
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
-    task, routine = _own_task(db, task_id, profile.id)
+    task, routine = get_owned_task(db, task_id, profile.id)
     day = (payload.local_date if payload else None) or today()
     scheduled_time = task.scheduled_time or "09:00"
 
@@ -386,7 +278,7 @@ def uncomplete_task(
     db: Session = Depends(get_db),
 ) -> dict:
     """Un-tick a task: reverses both the coins and the ELO it granted."""
-    task, routine = _own_task(db, task_id, profile.id)
+    task, routine = get_owned_task(db, task_id, profile.id)
     day = local_date or today()
 
     existing = (

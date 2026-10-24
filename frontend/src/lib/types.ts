@@ -12,6 +12,7 @@ export interface RankInfo {
 export interface Profile {
   id: string
   email: string
+  is_admin: boolean
   username: string | null
   username_changes: number
   username_change_cost: number

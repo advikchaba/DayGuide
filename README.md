@@ -159,6 +159,7 @@ a task at the ELO floor cannot award free points.
 | Shop | `/shop` | 12 themes, buy/equip, affordability checks (profile pictures are uploaded) |
 | Ladder | `/leaderboard` | Top 50 by ELO / coins / streak + your own position |
 | Profile | `/profile` | Stats, username change, picture upload, coin/ELO ledger, timing rules |
+| Admin | `/admin` | Administrator search, economy controls, routines, reports, shop and account deletion |
 
 New accounts start with **no routine** and are sent straight to the builder after claiming a
 username.
@@ -177,15 +178,16 @@ backend/
     economy.py         ELO tiers, timing rewards, perfect-day pipeline, streaks
     auth.py            Supabase/dev token verification + profile provisioning
     serializers.py     rows -> API payloads
-    routers/           auth_dev, profile, routines, shop, leaderboard
-    services/          storage and legacy verification helpers
-  tests/smoke_test.py  end-to-end API smoke test (auth, timing, uploads, shop, ladder)
+    routers/           auth_dev, profile, routines, shop, leaderboard, reports, admin
+    services/          storage, routine rules, account deletion and verification helpers
+  tests/smoke_test.py  end-to-end API smoke test (auth, timing, uploads, shop, ladder, admin)
 frontend/
   src/lib/             supabase.ts, authClient.ts, api.ts, themes.ts, types.ts, time.ts
   src/state/           AuthContext, ThemeContext, ToastContext
   src/components/      UI kit, AppLayout, AuthShell, TaskRow, RewardBurst, ProtectedRoute
   src/pages/           Landing, Login, Signup, AuthCallback, Onboarding, Routine, Builder,
                        Shop, Leaderboard, Profile
+  src/admin/           Administrator dashboard, user editor, reports, routines, shop
 supabase/schema.sql    the same schema as raw SQL
 mobile/
   android/             Bubblewrap TWA project (package com.advikchaba.routinery)
@@ -213,7 +215,42 @@ GET    /shop                    catalog with owned/equipped flags
 POST   /shop/{slug}/buy         spend coins
 POST   /shop/{slug}/equip       equip an owned cosmetic
 GET    /leaderboard             ladder (?metric=elo|coins|matches_won|streak)
+
+# Administrator only (ADMIN_EMAILS)
+GET    /admin/users             searchable account list (?q=&page=&page_size=)
+GET    /admin/users/{id}        profile, routines, shop inventory, purchases, ledger
+DELETE /admin/users/{id}        delete profile + auth identity {confirm_email}
+POST   /admin/users/{id}/coins/grant   add coins {amount}
+POST   /admin/users/{id}/coins/set     set coins {amount >= 0}
+POST   /admin/users/{id}/elo/grant     add ELO {amount}
+POST   /admin/users/{id}/elo/set       set ELO {amount >= 100}
+GET    /admin/users/{id}/reports       report (?range=3d|week|month)
+PATCH  /admin/users/{id}/routines/{routine_id}      rename a routine
+DELETE /admin/users/{id}/routines/{routine_id}      delete a routine
+POST   /admin/users/{id}/routines/{routine_id}/tasks add a task
+PATCH  /admin/users/{id}/tasks/{task_id}            edit a task
+DELETE /admin/users/{id}/tasks/{task_id}            delete a task
+POST   /admin/users/{id}/items/{slug}/grant         grant a paid shop item for free
+DELETE /admin/users/{id}/items/{slug}               remove an owned item
 ```
+
+### Administration
+
+Set `ADMIN_EMAILS` to a comma-separated list of real account emails. Those accounts get an
+`is_admin` flag on `/me` and an **Admin** navigation link. Every administrator route is also
+checked server-side; a hidden button is never the access control.
+
+The dashboard at `/admin` lists and searches every profile. Opening an account exposes coin/ELO
+grants and absolute sets, report windows, editable routines and tasks, free shop-item grants, item
+removal, the ledger, and account deletion. Coin changes write ledger entries. Coin sets cannot go
+below `0`; ELO sets cannot go below `100`. Grants are additive and may move ELO across the ladder.
+
+Deleting an account uses the Supabase Auth Admin API to remove the sign-in identity, then removes
+the local profile and its related rows. That frees the email for a new registration. This requires
+`SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY` on the API; without it the API refuses the
+deletion rather than leaving a half-deleted account. Deleted auth ids are tombstoned locally so an
+unexpired old access token cannot recreate the profile. If you delete an administrator, remove their
+email from `ADMIN_EMAILS` first; otherwise signing up again with that email restores admin access.
 
 ---
 

@@ -22,7 +22,7 @@ from .catalog import DEFAULT_AVATAR, DEFAULT_THEME
 from .config import settings
 from .database import get_db
 from .economy import AVATAR_CHANGE_COST, STARTING_COINS, rank_for
-from .models import Profile
+from .models import DeletedAccount, Profile
 from .security import decode_dev_token, new_user_id
 from .services.storage import public_url
 
@@ -105,6 +105,9 @@ def resolve_identity(token: str) -> Identity:
 # --------------------------------------------------------------------------- #
 def provision_profile(db: Session, identity: Identity) -> Profile:
     """Return the profile for an identity, creating it on first login."""
+    if db.get(DeletedAccount, identity.user_id):
+        raise AuthError("This account has been deleted. Create a new account to continue.")
+
     profile = db.get(Profile, identity.user_id)
     if profile:
         if identity.email and profile.email != identity.email:
@@ -172,9 +175,13 @@ def get_current_user_id(profile: Profile = Depends(get_current_profile)) -> str:
     return profile.id
 
 
-def require_admin(profile: Profile = Depends(get_current_profile)) -> Profile:
+def is_admin_profile(profile: Profile) -> bool:
     admins = settings.admin_email_set
-    if not admins or (profile.email or "").lower() not in admins:
+    return bool(admins and (profile.email or "").lower() in admins)
+
+
+def require_admin(profile: Profile = Depends(get_current_profile)) -> Profile:
+    if not is_admin_profile(profile):
         raise HTTPException(status_code=403, detail="Admin access required")
     return profile
 
@@ -185,6 +192,7 @@ def profile_payload(profile: Profile) -> dict:
     return {
         "id": profile.id,
         "email": profile.email,
+        "is_admin": is_admin_profile(profile),
         "username": profile.username,
         "username_changes": profile.username_changes,
         "username_change_cost": 400,

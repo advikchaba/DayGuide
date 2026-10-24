@@ -24,11 +24,14 @@ DB_PATH = ROOT / "test_routinery.db"
 if DB_PATH.exists():
     DB_PATH.unlink()
 
+ADMIN_EMAIL = f"admin-{uuid.uuid4().hex[:8]}@dayguide.dev"
+
 os.environ.update(
     DATABASE_URL=f"sqlite:///{DB_PATH.as_posix()}",
     ENVIRONMENT="test",
     DEV_AUTH="true",
     SEED_DEMO_PLAYERS="true",
+    ADMIN_EMAILS=ADMIN_EMAIL,
     # Force the offline provider even when a developer has real Supabase
     # credentials in backend/.env.
     SUPABASE_URL="",
@@ -49,6 +52,7 @@ from app.config import settings  # noqa: E402
 settings.supabase_url = ""
 settings.supabase_anon_key = ""
 settings.supabase_publishable_key = ""
+settings.admin_emails = ADMIN_EMAIL
 settings.upload_dir = os.environ["UPLOAD_DIR"]
 
 from app.main import app  # noqa: E402
@@ -449,6 +453,335 @@ def main() -> None:
             and again_payload.get("coins") == changed_payload.get("coins")
             and again_payload.get("username_changes") == 1,
             again.text,
+        )
+
+        print("\n== administration ==")
+        admin_session = signup(client, ADMIN_EMAIL)
+        admin_headers = auth(admin_session["access_token"])
+        check(
+            "administrator flag reaches the frontend",
+            admin_session["profile"]["is_admin"] is True,
+            admin_session["profile"],
+        )
+        check(
+            "ordinary accounts are not administrators",
+            client.get("/api/me", headers=headers).json()["is_admin"] is False,
+        )
+        check(
+            "admin routes require authentication",
+            client.get("/api/admin/users").status_code == 401,
+        )
+        check(
+            "ordinary accounts are refused admin routes",
+            client.get("/api/admin/users", headers=headers).status_code == 403,
+        )
+
+        found = client.get(
+            "/api/admin/users", params={"q": "TimingTinaTwo"}, headers=admin_headers
+        )
+        found_payload = found.json() if found.status_code == 200 else {}
+        check(
+            "admin can search every account by username",
+            found.status_code == 200
+            and found_payload.get("total") == 1
+            and found_payload["items"][0]["username"] == "TimingTinaTwo",
+            found.text,
+        )
+        target_id = found_payload["items"][0]["id"]
+        target_email = found_payload["items"][0]["email"]
+
+        detail = client.get(f"/api/admin/users/{target_id}", headers=admin_headers)
+        detail_payload = detail.json() if detail.status_code == 200 else {}
+        check(
+            "admin can open a user with routines, reports and purchases",
+            detail.status_code == 200
+            and len(detail_payload.get("routines", [])) >= 2
+            and len(detail_payload.get("purchases", [])) >= 2
+            and len(detail_payload.get("shop", [])) >= 10,
+            detail.text,
+        )
+
+        report = client.get(
+            f"/api/admin/users/{target_id}/reports",
+            params={"range": "month", "local_date": TODAY},
+            headers=admin_headers,
+        )
+        check(
+            "admin can read a user report",
+            report.status_code == 200
+            and report.json()["days"] == 30
+            and len(report.json()["daily"]) == 30,
+            report.text,
+        )
+
+        routine_id = detail_payload["routines"][0]["id"]
+        renamed = client.patch(
+            f"/api/admin/users/{target_id}/routines/{routine_id}",
+            json={"name": "Admin Edited Routine"},
+            headers=admin_headers,
+        )
+        check(
+            "admin can rename a user routine",
+            renamed.status_code == 200
+            and renamed.json()["name"] == "Admin Edited Routine",
+            renamed.text,
+        )
+
+        task_added = client.post(
+            f"/api/admin/users/{target_id}/routines/{routine_id}/tasks",
+            json={
+                "title": "Admin task",
+                "scheduled_time": "15:00",
+                "coin_value": 15,
+                "requires_proof": True,
+            },
+            headers=admin_headers,
+        )
+        added_payload = task_added.json() if task_added.status_code == 201 else {}
+        added_admin_task = next(
+            (task for task in added_payload.get("tasks", []) if task["title"] == "Admin task"),
+            None,
+        )
+        check(
+            "admin can add a task to a user routine",
+            task_added.status_code == 201
+            and added_admin_task is not None
+            and added_admin_task["requires_proof"] is True,
+            task_added.text,
+        )
+
+        task_updated = client.patch(
+            f"/api/admin/users/{target_id}/tasks/{added_admin_task['id']}",
+            json={
+                "title": "Admin task edited",
+                "scheduled_time": "16:00",
+                "coin_value": 25,
+                "requires_proof": True,
+            },
+            headers=admin_headers,
+        )
+        updated_task = next(
+            (
+                task
+                for task in (task_updated.json().get("tasks", []) if task_updated.status_code == 200 else [])
+                if task["id"] == added_admin_task["id"]
+            ),
+            None,
+        )
+        check(
+            "admin can edit a user task",
+            task_updated.status_code == 200
+            and updated_task is not None
+            and updated_task["scheduled_time"] == "16:00"
+            and updated_task["coin_value"] == 25
+            and updated_task["requires_proof"] is True,
+            task_updated.text,
+        )
+        check(
+            "admin task spacing rules still apply",
+            client.patch(
+                f"/api/admin/users/{target_id}/tasks/{added_admin_task['id']}",
+                json={"title": "Too close", "scheduled_time": "10:15", "coin_value": 10},
+                headers=admin_headers,
+            ).status_code
+            == 400,
+        )
+
+        deleted_task = client.delete(
+            f"/api/admin/users/{target_id}/tasks/{added_admin_task['id']}",
+            headers=admin_headers,
+        )
+        check(
+            "admin can delete a user task",
+            deleted_task.status_code == 200
+            and all(
+                task["id"] != added_admin_task["id"]
+                for task in deleted_task.json().get("tasks", [])
+            ),
+            deleted_task.text,
+        )
+
+        coins_before = client.get(
+            f"/api/admin/users/{target_id}", headers=admin_headers
+        ).json()["user"]["coins"]
+        coin_grant = client.post(
+            f"/api/admin/users/{target_id}/coins/grant",
+            json={"amount": 750},
+            headers=admin_headers,
+        )
+        check(
+            "coin grants add to the balance",
+            coin_grant.status_code == 200
+            and coin_grant.json()["applied"]["balance"] == coins_before + 750,
+            coin_grant.text,
+        )
+        coin_zero = client.post(
+            f"/api/admin/users/{target_id}/coins/set",
+            json={"amount": 0},
+            headers=admin_headers,
+        )
+        check(
+            "coin balances can be reduced to zero",
+            coin_zero.status_code == 200 and coin_zero.json()["applied"]["balance"] == 0,
+            coin_zero.text,
+        )
+        check(
+            "negative coin balances are refused",
+            client.post(
+                f"/api/admin/users/{target_id}/coins/set",
+                json={"amount": -1},
+                headers=admin_headers,
+            ).status_code
+            == 422,
+        )
+        coin_set = client.post(
+            f"/api/admin/users/{target_id}/coins/set",
+            json={"amount": 4321},
+            headers=admin_headers,
+        )
+        check(
+            "coin balances can be set to any non-negative value",
+            coin_set.status_code == 200 and coin_set.json()["applied"]["balance"] == 4321,
+            coin_set.text,
+        )
+
+        elo_before = client.get(
+            f"/api/admin/users/{target_id}", headers=admin_headers
+        ).json()["user"]["elo"]
+        elo_grant = client.post(
+            f"/api/admin/users/{target_id}/elo/grant",
+            json={"amount": 5000},
+            headers=admin_headers,
+        )
+        check(
+            "ELO grants can cross every rank boundary",
+            elo_grant.status_code == 200
+            and elo_grant.json()["applied"]["balance"] == elo_before + 5000
+            and elo_grant.json()["applied"]["balance"] > 2400,
+            elo_grant.text,
+        )
+        elo_set = client.post(
+            f"/api/admin/users/{target_id}/elo/set",
+            json={"amount": 800},
+            headers=admin_headers,
+        )
+        check(
+            "ELO can be reduced to any value above the floor",
+            elo_set.status_code == 200 and elo_set.json()["applied"]["balance"] == 800,
+            elo_set.text,
+        )
+        check(
+            "ELO below 100 is refused",
+            client.post(
+                f"/api/admin/users/{target_id}/elo/set",
+                json={"amount": 99},
+                headers=admin_headers,
+            ).status_code
+            == 422,
+        )
+
+        shop_before = client.get(
+            f"/api/admin/users/{target_id}", headers=admin_headers
+        ).json()
+        coins_before_item = shop_before["user"]["coins"]
+        granted = client.post(
+            f"/api/admin/users/{target_id}/items/pink/grant",
+            headers=admin_headers,
+        )
+        after_grant = client.get(
+            f"/api/admin/users/{target_id}", headers=admin_headers
+        ).json()
+        pink_purchase = next(
+            (purchase for purchase in after_grant["purchases"] if purchase["slug"] == "pink"),
+            None,
+        )
+        check(
+            "admin can grant a shop item for free",
+            granted.status_code == 200
+            and pink_purchase is not None
+            and pink_purchase["price_paid"] == 0
+            and after_grant["user"]["coins"] == coins_before_item,
+            granted.text,
+        )
+        check(
+            "granted items can be equipped by the user",
+            client.post("/api/shop/pink/equip", headers=headers).status_code == 200,
+        )
+        removed = client.delete(
+            f"/api/admin/users/{target_id}/items/pink", headers=admin_headers
+        )
+        after_remove = client.get(
+            f"/api/admin/users/{target_id}", headers=admin_headers
+        ).json()
+        check(
+            "admin can remove a purchased item without changing coins",
+            removed.status_code == 200
+            and all(purchase["slug"] != "pink" for purchase in after_remove["purchases"])
+            and after_remove["user"]["coins"] == coins_before_item,
+            removed.text,
+        )
+        check(
+            "removing an equipped theme returns the user to the default",
+            after_remove["user"]["theme_slug"] == "dark",
+            after_remove["user"]["theme_slug"],
+        )
+        check(
+            "free shop items cannot be granted as paid inventory",
+            client.post(
+                f"/api/admin/users/{target_id}/items/dark/grant",
+                headers=admin_headers,
+            ).status_code
+            == 400,
+        )
+
+        check(
+            "deletion needs the exact account email",
+            client.request(
+                "DELETE",
+                f"/api/admin/users/{target_id}",
+                json={"confirm_email": "wrong@example.com"},
+                headers=admin_headers,
+            ).status_code
+            == 400,
+        )
+        deletion = client.request(
+            "DELETE",
+            f"/api/admin/users/{target_id}",
+            json={"confirm_email": target_email},
+            headers=admin_headers,
+        )
+        check(
+            "admin can delete an account",
+            deletion.status_code == 200
+            and deletion.json()["deleted"] is True
+            and deletion.json()["email"] == target_email,
+            deletion.text,
+        )
+        check(
+            "deleted account tokens stop working immediately",
+            client.get("/api/me", headers=headers).status_code == 401,
+        )
+        check(
+            "deleted account no longer appears in admin search",
+            client.get(
+                "/api/admin/users", params={"q": "TimingTinaTwo"}, headers=admin_headers
+            ).json()["total"]
+            == 0,
+        )
+
+        replacement_session = signup(client, email)
+        check(
+            "the same email can create a new account after deletion",
+            replacement_session["profile"]["id"] != target_id
+            and replacement_session["profile"]["coins"] == 100,
+            replacement_session["profile"],
+        )
+        check(
+            "the replacement account is a clean profile",
+            client.get(
+                "/api/me", headers=auth(replacement_session["access_token"])
+            ).json()["username"]
+            is None,
         )
 
         print(f"\nAll {len(PASSED)} checks passed.")

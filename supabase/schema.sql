@@ -168,6 +168,14 @@ alter table proofs
 alter table proofs
   add constraint fk_proofs_match_task foreign key (match_task_id) references match_tasks(id) on delete cascade;
 
+-- Old access tokens are rejected locally after an admin deletes an account.
+create table if not exists deleted_accounts (
+  user_id    varchar(64) primary key,
+  email      varchar(255) not null,
+  deleted_at timestamptz not null default now()
+);
+create index if not exists ix_deleted_accounts_email on deleted_accounts (email);
+
 -- ---------------------------------------------------------------------------
 -- Row level security: the API uses the service role, so nothing is public.
 -- ---------------------------------------------------------------------------
@@ -183,6 +191,7 @@ alter table proofs          enable row level security;
 alter table matches         enable row level security;
 alter table match_tasks     enable row level security;
 alter table match_players   enable row level security;
+alter table deleted_accounts enable row level security;
 
 -- Optional: let a signed-in user read their own profile straight from Supabase.
 drop policy if exists "users read own profile" on profiles;

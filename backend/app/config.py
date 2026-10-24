@@ -95,7 +95,7 @@ class Settings(BaseSettings):
 
     @property
     def supabase_service_key(self) -> str:
-        """The server-only Supabase key used for Storage uploads."""
+        """The server-only Supabase key for Storage and Auth admin actions."""
         return (self.supabase_service_role_key or self.supabase_secret_key).strip()
 
     @property

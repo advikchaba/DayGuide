@@ -244,3 +244,20 @@ class MatchPlayer(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     match: Mapped[Match] = relationship(back_populates="players")
+
+
+class DeletedAccount(Base):
+    """Tombstone for a deleted profile.
+
+    Supabase access tokens can still verify against the project JWT secret
+    until they expire. Without a local tombstone, a deleted user's old token
+    would silently provision a brand-new profile and resurrect the account.
+    A genuinely new signup gets a new auth id, so the same email is still free
+    to register again.
+    """
+
+    __tablename__ = "deleted_accounts"
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    deleted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

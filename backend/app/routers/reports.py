@@ -199,12 +199,11 @@ def _period_rows(
     return completions, perfect_days
 
 
-@router.get("/reports")
-def read_report(
-    period: PeriodKey = Query(default="week", alias="range"),
-    local_date: date | None = Query(default=None),
-    profile: Profile = Depends(get_current_profile),
-    db: Session = Depends(get_db),
+def build_report(
+    db: Session,
+    profile: Profile,
+    period: PeriodKey = "week",
+    local_date: date | None = None,
 ) -> dict:
     """Return a rolling report for the last 3, 7 or 30 local days."""
     days, label = PERIODS[period]
@@ -240,3 +239,13 @@ def read_report(
         "streak": profile.streak,
         "best_streak": profile.best_streak,
     }
+
+
+@router.get("/reports")
+def read_report(
+    period: PeriodKey = Query(default="week", alias="range"),
+    local_date: date | None = Query(default=None),
+    profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db),
+) -> dict:
+    return build_report(db, profile, period, local_date)

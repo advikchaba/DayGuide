@@ -170,7 +170,13 @@ def apply_rewards(
     if coins:
         profile.coins = max(0, profile.coins + coins)
     if elo:
-        profile.elo = clamp_elo(profile.elo + elo)
+        # Normal accounts stay inside the published ladder. An administrator
+        # may grant ELO above the ceiling; do not immediately clamp that grant
+        # back down on the user's next ordinary reward.
+        if profile.elo > MAX_ELO:
+            profile.elo = max(MIN_ELO, profile.elo + elo)
+        else:
+            profile.elo = clamp_elo(profile.elo + elo)
 
     applied_coins = profile.coins - coins_before
     applied_elo = profile.elo - elo_before

@@ -19,6 +19,7 @@ export function AppLayout() {
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
+  const links = profile?.is_admin ? [...LINKS, { to: '/admin', label: 'Admin' }] : LINKS
 
   const handleSignOut = async () => {
     setBusy(true)
@@ -39,7 +40,7 @@ export function AppLayout() {
             <Logo />
 
             <nav className="ml-4 hidden items-center gap-1 md:flex">
-              {LINKS.map((link) => (
+              {links.map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}
@@ -93,7 +94,7 @@ export function AppLayout() {
 
           {/* Mobile nav */}
           <div className="flex gap-1 overflow-x-auto px-3 pb-2 md:hidden">
-            {LINKS.map((link) => (
+            {links.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}

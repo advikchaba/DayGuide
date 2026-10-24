@@ -38,6 +38,7 @@ class ProfileOut(BaseModel):
 
     id: str
     email: str
+    is_admin: bool
     username: str | None
     username_changes: int
     username_change_cost: int
@@ -299,6 +300,28 @@ class LedgerOut(BaseModel):
     elo_delta: int
     reason: str
     created_at: datetime
+
+
+# --------------------------------------------------------------------------- #
+# Administration
+# --------------------------------------------------------------------------- #
+MAX_ADMIN_AMOUNT = 1_000_000_000
+
+
+class AdminGrantRequest(BaseModel):
+    amount: int = Field(ge=1, le=MAX_ADMIN_AMOUNT)
+
+
+class AdminCoinSetRequest(BaseModel):
+    amount: int = Field(ge=0, le=MAX_ADMIN_AMOUNT)
+
+
+class AdminEloSetRequest(BaseModel):
+    amount: int = Field(ge=100, le=MAX_ADMIN_AMOUNT)
+
+
+class AdminDeleteUserRequest(BaseModel):
+    confirm_email: str = Field(min_length=3, max_length=255)
 
 
 TokenResponse.model_rebuild()

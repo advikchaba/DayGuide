@@ -78,7 +78,7 @@ export const api = {
   get: <T>(path: string) => apiRequest<T>(path),
   post: <T>(path: string, json?: unknown) => apiRequest<T>(path, { method: 'POST', json }),
   patch: <T>(path: string, json?: unknown) => apiRequest<T>(path, { method: 'PATCH', json }),
-  del: <T>(path: string) => apiRequest<T>(path, { method: 'DELETE' }),
+  del: <T>(path: string, json?: unknown) => apiRequest<T>(path, { method: 'DELETE', json }),
   upload: <T>(path: string, formData: FormData) =>
     apiRequest<T>(path, { method: 'POST', formData }),
   public: <T>(path: string) => apiRequest<T>(path, { auth: false }),
