@@ -69,7 +69,7 @@ app.add_middleware(
 
 
 _active_requests = 0
-_refresh_lock = asyncio.Lock()
+_refreshing = False
 
 
 @app.middleware("http")
@@ -81,24 +81,33 @@ async def persist_sqlite_database(request: Request, call_next):
     keep serving (and eventually uploading) stale rows. That made changes like
     a username update appear to vanish depending on which instance answered.
 
-    The refresh only runs for the sole in-flight request and holds the lock
-    while it replaces the file, so a request cannot open a session halfway
-    through a restore. Other requests wait briefly for the check, then proceed
-    against the refreshed copy. After the response, changes are uploaded as
-    before; ``upload`` is a cheap no-op when nothing wrote.
+    The refresh only runs for the sole in-flight request and blocks new
+    requests while it replaces the file, so a request cannot open a session
+    halfway through a restore. Other requests then proceed against the
+    refreshed copy. After the response, changes are uploaded as before;
+    ``upload`` is a cheap no-op when nothing wrote.
     """
-    global _active_requests
+    global _active_requests, _refreshing
 
-    async with _refresh_lock:
-        _active_requests += 1
-        is_first_request = _active_requests == 1
-        if is_first_request and db_sync.enabled():
+    # Wait for a restore that another request started. This uses the event
+    # loop rather than an asyncio.Lock so a serverless runtime that creates a
+    # fresh loop per invocation cannot leave a lock bound to a dead loop.
+    while _refreshing:
+        await asyncio.sleep(0.01)
+
+    # No await between the counter change and the refresh decision, so two
+    # requests can never both believe they are the only one in flight.
+    _active_requests += 1
+    try:
+        if _active_requests == 1 and db_sync.enabled():
+            _refreshing = True
             try:
                 await run_in_threadpool(db_sync.refresh_if_stale)
             except Exception:
                 logger.exception("Could not refresh the SQLite database from Supabase Storage")
+            finally:
+                _refreshing = False
 
-    try:
         response = await call_next(request)
 
         if db_sync.enabled():
@@ -108,8 +117,7 @@ async def persist_sqlite_database(request: Request, call_next):
                 logger.exception("Could not persist the SQLite database to Supabase Storage")
         return response
     finally:
-        async with _refresh_lock:
-            _active_requests -= 1
+        _active_requests -= 1
 
 
 # Proof photos are served straight from disk in development. On Vercel the
