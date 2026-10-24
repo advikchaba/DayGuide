@@ -181,7 +181,14 @@ def restore(path: Path | None = None) -> bool:
 
     if response.status_code == 200:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(response.content)
+        # Replace atomically so a killed function never leaves a half-written
+        # database for the next request on this instance.
+        tmp_path = path.with_name(f"{path.name}.restore")
+        try:
+            tmp_path.write_bytes(response.content)
+            os.replace(tmp_path, path)
+        finally:
+            tmp_path.unlink(missing_ok=True)
         global _last_uploaded_stamp, _last_remote_version, _last_version_check
         _last_uploaded_stamp = path.stat().st_mtime_ns
         _last_remote_version = _response_version(response)
