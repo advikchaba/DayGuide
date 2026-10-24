@@ -12,7 +12,7 @@ from .economy import rank_for, today
 from .models import Profile, ShopItem
 from .security import new_user_id
 
-logger = logging.getLogger("routinery.seed")
+logger = logging.getLogger("dayguide.seed")
 
 _DEMO_PLAYERS = (
     ("NightOwl", 2320, 18450, 41, 22),

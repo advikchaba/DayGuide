@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Routinery",
-  "short_name": "Routinery",
-  "description": "Build your daily routine, earn coins, and climb the ranked ladder.",
+  "name": "DayGuide",
+  "short_name": "DayGuide",
+  "description": "DayGuide — build your daily routine, earn coins, and climb the ranked ladder.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/",

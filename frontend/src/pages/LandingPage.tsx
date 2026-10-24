@@ -55,7 +55,9 @@ export function LandingPage() {
 
         {/* Hero */}
         <section className="mx-auto max-w-6xl px-4 pb-10 pt-2 text-center md:pt-6">
-          <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-muted">Routines, coins and a timing ladder</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-muted">
+            DayGuide · routines, coins and a timing ladder
+          </p>
 
           <div className="relative mx-auto mt-2 h-[320px] w-full max-w-2xl sm:h-[430px]">
             <CrystalizedBall
@@ -169,7 +171,7 @@ export function LandingPage() {
         </section>
 
         <footer className="px-4 py-6 text-center text-xs text-muted">
-          Routinery · built with React, FastAPI and Supabase
+          DayGuide · built with React, FastAPI and Supabase
         </footer>
       </div>
     </div>

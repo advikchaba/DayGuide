@@ -1,6 +1,6 @@
-# Routinery Android app
+# DayGuide Android app
 
-This folder contains the Android package for the Routinery web app. It is a **Trusted Web
+This folder contains the Android package for the DayGuide web app. It is a **Trusted Web
 Activity (TWA)** wrapper around the canonical production site, so the Android app always serves the
 same deployed frontend, API, auth, and data as the website.
 
@@ -8,10 +8,10 @@ same deployed frontend, API, auth, and data as the website.
 
 | Field | Value |
 | --- | --- |
-| App name | Routinery |
+| App name | DayGuide |
 | Package ID | `com.advikchaba.routinery` |
-| Version | `1.0.1` (version code `2`) |
-| Production host | `https://routinery-advik-chaba.vercel.app` |
+| Version | `1.0.2` (version code `3`) |
+| Production host | `https://dayguide-advik-chaba.vercel.app` |
 | Start URL | `/` |
 | Minimum Android | API 24 (Android 7.0) |
 | Target Android | API 36 |
@@ -20,15 +20,25 @@ The TWA opens in Chrome. It does not bundle a copy of the web app, so a normal a
 site is visible immediately; publish a new Android build only when the wrapper, icon, package
 metadata, or version changes.
 
+The package ID, keystore alias, and `routinery://sync-reminders` bridge keep their original names
+so existing installs can update and continue syncing reminders. The user-facing app name, launcher
+label, icon, splash screen, and web host are DayGuide.
+
 ## Artifacts
+
+The checked-in `release/routinery-1.0.1-*` files are the last pre-rename builds. Rebuild after the
+DayGuide rename to produce `release/dayguide-1.0.2-release.apk` and
+`release/dayguide-1.0.2-release.aab`.
 
 | File | Purpose |
 | --- | --- |
-| `release/routinery-1.0.1-release.apk` | Signed release APK for direct installation and testing |
-| `release/routinery-1.0.1-release.aab` | Signed release bundle to upload to Google Play Console |
+| `release/dayguide-1.0.2-release.apk` | Signed release APK for direct installation and testing (next build) |
+| `release/dayguide-1.0.2-release.aab` | Signed release bundle to upload to Google Play Console (next build) |
+| `release/routinery-1.0.1-release.apk` | Previous signed build, kept for reference until the new APK is built |
+| `release/routinery-1.0.1-release.aab` | Previous signed bundle, kept for reference until the new AAB is built |
 | `release/SHA256SUMS.txt` | SHA-256 checksums and signing certificate fingerprint |
 
-Install the APK on a connected device:
+Install the current APK on a connected device:
 
 ```powershell
 adb install -r mobile/release/routinery-1.0.1-release.apk
@@ -38,12 +48,12 @@ The APK is standalone-signed with the upload key in this folder. It is not a deb
 
 ## Task reminders
 
-Version 1.0.1 adds native task reminders. They are local Android notifications, not web push, so
-they work while Routinery is closed and do not need a server scheduler.
+DayGuide has native task reminders. They are local Android notifications, not web push, so they
+work while DayGuide is closed and do not need a server scheduler.
 
 How it works:
 
-1. Open Routinery on Android and tap **Sync Android reminders** on the Routine or Profile page.
+1. Open DayGuide on Android and tap **Sync Android reminders** on the Routine or Profile page.
 2. The web app hands the current task titles and `HH:MM` times to the APK through
    `routinery://sync-reminders`.
 3. The APK stores the schedule in `SharedPreferences` and schedules one `AlarmManager` alarm per
@@ -66,7 +76,7 @@ Limitations:
   **Sync Android reminders** again after adding, removing, or retiming tasks.
 - A task that is completed after the last sync can still produce its reminder. The app has no
   completion channel back into the native alarm.
-- Force-stopping the app in Android Settings cancels its alarms. Open Routinery again to re-arm
+- Force-stopping the app in Android Settings cancels its alarms. Open DayGuide again to re-arm
   them.
 - This is an Android-only feature. The web build shows the sync card only on Android.
 
@@ -98,11 +108,13 @@ E3:F5:3A:1F:D7:45:3E:77:E2:13:BA:7A:29:A5:00:FD:0B:62:08:EA:BD:11:A4:B6:82:83:B4
 The TWA association file is deployed at:
 
 ```text
-https://routinery-advik-chaba.vercel.app/.well-known/assetlinks.json
+https://dayguide-advik-chaba.vercel.app/.well-known/assetlinks.json
 ```
 
-It currently contains the fingerprint above, so the APK in `release/` opens without a browser
-address bar when installed directly.
+It currently contains the fingerprint above, so a build targeting the new host opens without a
+browser address bar when installed directly. The checked-in `release/routinery-1.0.1-*` artifacts
+still target the old host (which now redirects to the canonical host); rebuild and install the new
+APK before testing the browser-less TWA experience.
 
 Google Play App Signing normally re-signs the app with a Play-managed app signing certificate. If
 the Play Console uses a different certificate from this upload key, add the Play Console **app
@@ -113,7 +125,7 @@ setup, in which case the existing file remains correct.
 Verify the association with Google:
 
 ```text
-https://digitalassetlinks.googleapis.com/v1/assetlinks:check?source.web.site=https%3A%2F%2Froutinery-advik-chaba.vercel.app&relation=delegate_permission%2Fcommon.handle_all_urls&target.android_app.package_name=com.advikchaba.routinery&target.android_app.certificate.sha256_fingerprint=E3%3AF5%3A3A%3A1F%3AD7%3A45%3A3E%3A77%3AE2%3A13%3ABA%3A7A%3A29%3AA5%3A00%3AFD%3A0B%3A62%3A08%3AEA%3ABD%3A11%3AA4%3AB6%3A82%3A83%3AB4%3AED%3A07%3A5D%3A29%3A62
+https://digitalassetlinks.googleapis.com/v1/assetlinks:check?source.web.site=https%3A%2F%2Fdayguide-advik-chaba.vercel.app&relation=delegate_permission%2Fcommon.handle_all_urls&target.android_app.package_name=com.advikchaba.routinery&target.android_app.certificate.sha256_fingerprint=E3%3AF5%3A3A%3A1F%3AD7%3A45%3A3E%3A77%3AE2%3A13%3ABA%3A7A%3A29%3AA5%3A00%3AFD%3A0B%3A62%3A08%3AEA%3ABD%3A11%3AA4%3AB6%3A82%3A83%3AB4%3AED%3A07%3A5D%3A29%3A62
 ```
 
 The response should include `"linked": true`.
@@ -173,7 +185,8 @@ one line if `update` regenerates it.
    `com.advikchaba.routinery`.
 2. Enroll in Play App Signing. Either use the existing upload key as the app signing key, or note the
    Play-managed app signing certificate and update the Digital Asset Links fingerprint.
-3. Upload `release/routinery-1.0.1-release.aab` to an internal testing or production track.
+3. Upload `release/dayguide-1.0.2-release.aab` (or the previous bundle while testing) to an internal
+   testing or production track.
 4. Complete the store listing: app name, short and full description, phone screenshots, a 512x512
    icon, and a 1024x500 feature graphic.
 5. Add a privacy policy URL and complete the Data safety form. The app handles account email,

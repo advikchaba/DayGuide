@@ -1,4 +1,4 @@
--- Routinery schema for Supabase Postgres.
+-- DayGuide schema for Supabase Postgres.
 --
 -- The FastAPI backend creates these tables automatically on boot; this file is
 -- here for teams who prefer to manage schema inside the Supabase SQL editor.

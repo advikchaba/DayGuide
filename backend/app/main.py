@@ -1,4 +1,4 @@
-"""Routinery API entry point.
+"""DayGuide API entry point.
 
 Run locally:
     cd backend
@@ -24,7 +24,7 @@ from .services import db_sync
 from .services.storage import uploads_root
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
-logger = logging.getLogger("routinery")
+logger = logging.getLogger("dayguide")
 
 
 @asynccontextmanager
@@ -42,7 +42,7 @@ async def lifespan(_app: FastAPI):
             "or the Supabase Storage credentials."
         )
     logger.info(
-        "Routinery API ready | env=%s | db=%s | persist=%s | supabase=%s | storage=%s",
+        "DayGuide API ready | env=%s | db=%s | persist=%s | supabase=%s | storage=%s",
         settings.environment,
         settings.database_url.split("://")[0],
         "supabase-storage" if db_sync.enabled() else "none",

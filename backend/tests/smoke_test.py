@@ -1,4 +1,4 @@
-"""End-to-end smoke test for the timing-based Routinery API.
+"""End-to-end smoke test for the timing-based DayGuide API.
 
 Runs the real FastAPI app against a throwaway SQLite database:
 signup -> timed routine -> on-time/late rewards -> perfect day -> shop -> ladder.

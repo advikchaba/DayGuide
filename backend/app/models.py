@@ -1,4 +1,4 @@
-"""ORM models for Routinery.
+"""ORM models for DayGuide.
 
 Tables
 ------

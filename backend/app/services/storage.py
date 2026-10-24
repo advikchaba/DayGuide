@@ -16,7 +16,7 @@ import httpx
 
 from ..config import settings
 
-logger = logging.getLogger("routinery.storage")
+logger = logging.getLogger("dayguide.storage")
 
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # fallback when MAX_UPLOAD_BYTES is unset
 

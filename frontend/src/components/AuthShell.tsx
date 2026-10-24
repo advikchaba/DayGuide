@@ -42,7 +42,7 @@ export function AuthShell({
               ))}
             </ul>
           </div>
-          <p className="text-xs text-muted">Built with React, FastAPI and Supabase.</p>
+          <p className="text-xs text-muted">DayGuide · built with React, FastAPI and Supabase.</p>
         </aside>
 
         {/* Form panel */}

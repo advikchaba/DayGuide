@@ -15,6 +15,7 @@ import {
   signUpWithEmail as supabaseSignUp,
 } from './supabase'
 
+// Storage key kept from before the rename so existing dev sessions stay valid.
 const DEV_TOKEN_KEY = 'routinery.dev_token'
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 

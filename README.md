@@ -1,4 +1,8 @@
-# Routinery — turn your daily routine into competitiveness
+<p align="center">
+  <img src="frontend/public/icons/logo-mark.svg" width="88" height="88" alt="DayGuide logo" />
+</p>
+
+# DayGuide — turn your daily routine into competitiveness
 
 A full-stack routine habit game: build a daily checklist with a time for every task, check in near
 that time to earn coins and ELO, spend the coins on themes, upload your own profile picture, and climb
@@ -29,7 +33,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. Sign up with any email (e.g. `me@routinery.dev`) and you are in.
+Open <http://localhost:5173>. Sign up with any email (e.g. `me@dayguide.dev`) and you are in.
 
 * API docs: <http://localhost:8000/docs>
 * Health check: <http://localhost:8000/api/health>
@@ -226,10 +230,10 @@ frontend calls `/api` same-origin — no backend URL, CORS setup, or `VITE_API_U
 
 ### Create or convert the project
 
-The project is `routinery` with the canonical production domain
-`https://routinery-advik-chaba.vercel.app`. The `routinery-sigma.vercel.app` alias redirects to it so
-browsers keep one login session. If you are converting an existing frontend project, keep the domain
-and Supabase redirect URLs aligned:
+The canonical production domain is `https://dayguide-advik-chaba.vercel.app`. The older
+`routinery-advik-chaba.vercel.app` and `routinery-sigma.vercel.app` hosts redirect to it so browsers
+keep one login session. If you are converting an existing frontend project, keep the domain and
+Supabase redirect URLs aligned:
 
 1. Open the project → **Settings → General**.
 2. Set **Root Directory** to the repository root (`.`), not `frontend` or `backend`.
@@ -254,7 +258,7 @@ browser bundle.
 | Variable | Value |
 | --- | --- |
 | `ENVIRONMENT` | `production` |
-| `FRONTEND_ORIGIN` | `https://routinery-advik-chaba.vercel.app` (canonical project domain) |
+| `FRONTEND_ORIGIN` | `https://dayguide-advik-chaba.vercel.app` (canonical project domain) |
 | `EXTRA_ORIGINS` | Custom frontend domains, comma-separated (optional) |
 | `DATABASE_URL` | Supabase **Session pooler** connection string (optional; without it the backend persists SQLite in the private `routinery-data` bucket) |
 | `SUPABASE_URL` | `https://YOUR-PROJECT.supabase.co` |
@@ -278,14 +282,14 @@ request is slow.
 Open:
 
 ```text
-https://routinery-advik-chaba.vercel.app/api/health
+https://dayguide-advik-chaba.vercel.app/api/health
 ```
 
 It should report `"auth":"supabase"`, `"storage":"supabase"`, and `"persist":"supabase-storage"` when
 `DATABASE_URL` is unset. Then:
 
 ```text
-https://routinery-advik-chaba.vercel.app/api/config
+https://dayguide-advik-chaba.vercel.app/api/config
 ```
 
 `supabase_configured` must be `true`. If `/api/health` returns the frontend HTML, the root
@@ -294,12 +298,13 @@ https://routinery-advik-chaba.vercel.app/api/config
 ### Supabase Auth URLs
 
 In Supabase **Authentication → URL Configuration**, set *Site URL* to
-`https://routinery-advik-chaba.vercel.app` and add
-`https://routinery-advik-chaba.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs
-for development. The `routinery-sigma.vercel.app` alias redirects to the canonical host and preserves
-query strings, but using the canonical URL everywhere avoids an extra redirect during OAuth and email
-confirmation. If you use a custom domain, add it to `EXTRA_ORIGINS` and to Supabase's redirect
-allowlist.
+`https://dayguide-advik-chaba.vercel.app` and add
+`https://dayguide-advik-chaba.vercel.app/auth/callback` to *Redirect URLs*. Keep the localhost URLs
+for development. The `routinery-advik-chaba.vercel.app` and `routinery-sigma.vercel.app` aliases
+redirect to the canonical host and preserve query strings, but using the canonical URL everywhere
+avoids an extra redirect during OAuth and email confirmation. If you use a custom domain, add it to
+`EXTRA_ORIGINS` and to Supabase's redirect allowlist. If your Supabase email templates mention the
+old name, update them under **Authentication → Email Templates** as well.
 
 ### What runs where
 
@@ -329,15 +334,20 @@ allowlist.
 `mobile/` contains a Trusted Web Activity wrapper for the canonical production site. It opens the
 deployed app in Chrome and uses the same backend, auth, and data as the website.
 
-* Package: `com.advikchaba.routinery`
-* Version: `1.0.0` (version code `1`)
-* Signed APK: `mobile/release/routinery-1.0.0-release.apk`
-* Play Store bundle: `mobile/release/routinery-1.0.0-release.aab`
+* Package: `com.advikchaba.routinery` (kept unchanged so existing Play Store installs can update)
+* Version: `1.0.2` (version code `3`)
+* Next signed APK: `mobile/release/dayguide-1.0.2-release.apk`
+* Next Play Store bundle: `mobile/release/dayguide-1.0.2-release.aab`
+* Previous pre-rename artifacts: `mobile/release/routinery-1.0.1-*`
 
 The Digital Asset Links file is deployed at
-`https://routinery-advik-chaba.vercel.app/.well-known/assetlinks.json`. If Google Play App Signing
+`https://dayguide-advik-chaba.vercel.app/.well-known/assetlinks.json`. If Google Play App Signing
 uses a different app signing certificate, add that SHA-256 fingerprint to
 `frontend/public/.well-known/assetlinks.json` and redeploy before testing the Play-signed build.
+
+> The DayGuide rename is user-facing. The Android package ID, custom reminder scheme, browser local
+> storage keys, and Supabase storage object names deliberately keep the old `routinery` identifier so
+> existing installs, sessions, and data remain valid.
 
 See [`mobile/README.md`](mobile/README.md) for signing-key custody, rebuild steps, and the Play
 Console checklist.

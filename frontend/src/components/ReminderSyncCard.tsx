@@ -7,7 +7,7 @@ import { useToast } from '../state/ToastContext'
 /**
  * Hands the current routine schedule to the Android APK. The APK stores the
  * times and schedules local AlarmManager notifications, so reminders still
- * arrive when Routinery is closed.
+ * arrive when DayGuide is closed.
  */
 export function ReminderSyncCard({ routines }: { routines: Routine[] }) {
   const { push } = useToast()
@@ -37,13 +37,13 @@ export function ReminderSyncCard({ routines }: { routines: Routine[] }) {
       window.location.href = intent
     } catch {
       setOpening(false)
-      push('Could not open the Android app. Install the latest Routinery APK and try again.', 'error')
+      push('Could not open the Android app. Install the latest DayGuide APK and try again.', 'error')
       return
     }
     window.setTimeout(() => {
       setOpening(false)
       if (document.visibilityState === 'visible') {
-        push('If Routinery did not open, install the latest Android app and try again.', 'info')
+        push('If DayGuide did not open, install the latest Android app and try again.', 'info')
       }
     }, 2500)
   }
@@ -54,8 +54,8 @@ export function ReminderSyncCard({ routines }: { routines: Routine[] }) {
         <div className="min-w-0">
           <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-muted">Task reminders</h3>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Get a notification at each task&apos;s scheduled time, even when Routinery is closed.
-            Requires the Routinery Android app. Allow notifications and Alarms &amp; reminders for
+            Get a notification at each task&apos;s scheduled time, even when DayGuide is closed.
+            Requires the DayGuide Android app. Allow notifications and Alarms &amp; reminders for
             exact timing.
           </p>
         </div>

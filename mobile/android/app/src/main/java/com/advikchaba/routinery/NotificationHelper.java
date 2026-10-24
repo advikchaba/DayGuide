@@ -62,7 +62,7 @@ public final class NotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        String body = "Scheduled for " + formatTime(task.time) + ". Tap to open Routinery.";
+        String body = "Scheduled for " + formatTime(task.time) + ". Tap to open DayGuide.";
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(task.title)

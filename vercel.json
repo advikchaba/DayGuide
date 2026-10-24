@@ -6,10 +6,21 @@
       "has": [
         {
           "type": "host",
+          "value": "routinery-advik-chaba.vercel.app"
+        }
+      ],
+      "destination": "https://dayguide-advik-chaba.vercel.app/$1",
+      "permanent": false
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
           "value": "routinery-sigma.vercel.app"
         }
       ],
-      "destination": "https://routinery-advik-chaba.vercel.app/$1",
+      "destination": "https://dayguide-advik-chaba.vercel.app/$1",
       "permanent": false
     }
   ],

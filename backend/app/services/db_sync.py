@@ -24,8 +24,10 @@ import httpx
 
 from ..config import settings
 
-logger = logging.getLogger("routinery.db_sync")
+logger = logging.getLogger("dayguide.db_sync")
 
+# These storage names are deliberately unchanged: renaming them would orphan
+# the existing production snapshot.
 BUCKET = "routinery-data"
 OBJECT_KEY = "routinery.db"
 RUNTIME_DB_PATH = Path("/tmp/routinery.db")

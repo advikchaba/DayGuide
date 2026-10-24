@@ -12,6 +12,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # from. Vercel supplies real environment variables, so the file is optional.
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
+# Keep every deployment host allowed even if a Vercel environment still has a
+# stale FRONTEND_ORIGIN after the domain rename. The old hosts redirect to the
+# canonical one, but allowing them here keeps preflight requests harmless.
+PRODUCTION_ORIGINS = frozenset(
+    {
+        "https://dayguide-advik-chaba.vercel.app",
+        "https://routinery-advik-chaba.vercel.app",
+        "https://routinery-sigma.vercel.app",
+    }
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -21,13 +32,14 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    app_name: str = "Routinery API"
+    app_name: str = "DayGuide API"
     environment: str = "development"
     api_prefix: str = "/api"
     frontend_origin: str = "http://localhost:5173"
     extra_origins: str = ""
 
     # --- Database ---------------------------------------------------------
+    # Kept as routinery.db so existing local databases keep their data.
     database_url: str = "sqlite:///./routinery.db"
 
     # --- Supabase ---------------------------------------------------------
@@ -69,6 +81,7 @@ class Settings(BaseSettings):
         origins = {o.strip().rstrip("/") for o in self.extra_origins.split(",") if o.strip()}
         if self.frontend_origin.strip():
             origins.add(self.frontend_origin.strip().rstrip("/"))
+        origins.update(PRODUCTION_ORIGINS)
         return sorted(origins)
 
     @property

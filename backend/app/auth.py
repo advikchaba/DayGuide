@@ -26,7 +26,7 @@ from .models import Profile
 from .security import decode_dev_token, new_user_id
 from .services.storage import public_url
 
-logger = logging.getLogger("routinery.auth")
+logger = logging.getLogger("dayguide.auth")
 
 
 class AuthError(HTTPException):
@@ -116,7 +116,9 @@ def provision_profile(db: Session, identity: Identity) -> Profile:
     # with no routine - building one is the first thing the app asks them to do.
     profile = Profile(
         id=identity.user_id,
-        email=identity.email or f"{identity.user_id}@routinery.local",
+        # Supabase identities normally carry an email; this fallback is only for
+        # providers that do not expose one.
+        email=identity.email or f"{identity.user_id}@dayguide.local",
         coins=STARTING_COINS,
         elo=100,
         avatar_slug=DEFAULT_AVATAR,

@@ -1,8 +1,8 @@
 {
   "packageId": "com.advikchaba.routinery",
-  "host": "routinery-advik-chaba.vercel.app",
-  "name": "Routinery",
-  "launcherName": "Routinery",
+  "host": "dayguide-advik-chaba.vercel.app",
+  "name": "DayGuide",
+  "launcherName": "DayGuide",
   "display": "standalone",
   "themeColor": "#101011",
   "themeColorDark": "#101011",
@@ -13,27 +13,27 @@
   "backgroundColor": "#101011",
   "enableNotifications": false,
   "startUrl": "/",
-  "iconUrl": "https://routinery-advik-chaba.vercel.app/icons/icon-512.png",
-  "maskableIconUrl": "https://routinery-advik-chaba.vercel.app/icons/maskable-512.png",
-  "appVersion": "1.0.1",
-  "appVersionCode": 2,
+  "iconUrl": "https://dayguide-advik-chaba.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://dayguide-advik-chaba.vercel.app/icons/maskable-512.png",
+  "appVersion": "1.0.2",
+  "appVersionCode": 3,
   "signingKey": {
     "path": "../keystore/routinery-upload.jks",
     "alias": "routinery"
   },
   "splashScreenFadeOutDuration": 300,
-  "webManifestUrl": "https://routinery-advik-chaba.vercel.app/manifest.webmanifest",
+  "webManifestUrl": "https://dayguide-advik-chaba.vercel.app/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://routinery-advik-chaba.vercel.app/",
+  "fullScopeUrl": "https://dayguide-advik-chaba.vercel.app/",
   "minSdkVersion": 24,
   "orientation": "portrait",
   "fingerprints": [
     {
-      "name": "Routinery upload key",
+      "name": "DayGuide upload key",
       "value": "E3:F5:3A:1F:D7:45:3E:77:E2:13:BA:7A:29:A5:00:FD:0B:62:08:EA:BD:11:A4:B6:82:83:B4:ED:07:5D:29:62"
     }
   ],

@@ -1,9 +1,11 @@
 import type { Routine } from './types'
 
+// Package and scheme are deliberately unchanged so existing DayGuide installs
+// can still receive the reminder schedule after the user-facing rename.
 const ANDROID_PACKAGE = 'com.advikchaba.routinery'
-const FALLBACK_URL = 'https://routinery-advik-chaba.vercel.app/profile'
+const FALLBACK_URL = 'https://dayguide-advik-chaba.vercel.app/profile'
 
-/** True on Android Chrome / the Routinery TWA. */
+/** True on Android Chrome / the DayGuide TWA. */
 export function isAndroidDevice(): boolean {
   return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
 }

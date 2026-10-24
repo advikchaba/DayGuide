@@ -22,10 +22,10 @@ import httpx
 
 from ..config import settings
 
-logger = logging.getLogger("routinery.vision")
+logger = logging.getLogger("dayguide.vision")
 
 _SYSTEM_PROMPT = (
-    "You are Routinery's proof referee. Users photograph evidence that they completed a routine task. "
+    "You are DayGuide's proof referee. Users photograph evidence that they completed a routine task. "
     "You must decide whether the photo plausibly shows the claimed task being done or already completed. "
     "Be fair but strict: reject stock-looking images, screenshots of the task list, blank/black photos, "
     "photos of unrelated objects, and obvious duplicates. Accept ordinary evidence such as a gym selfie, "

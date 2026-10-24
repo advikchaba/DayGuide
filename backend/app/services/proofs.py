@@ -29,7 +29,7 @@ from ..economy import (
 from ..models import Match, MatchPlayer, Profile, Proof, Routine, Task, TaskCompletion
 from .vision import VerificationResult
 
-logger = logging.getLogger("routinery.proofs")
+logger = logging.getLogger("dayguide.proofs")
 
 
 @dataclass

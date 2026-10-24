@@ -22,10 +22,10 @@ plugins {
 
 def twaManifest = [
     applicationId: 'com.advikchaba.routinery',
-    hostName: 'routinery-advik-chaba.vercel.app', // The domain being opened in the TWA.
+    hostName: 'dayguide-advik-chaba.vercel.app', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
-    name: 'Routinery', // The application name.
-    launcherName: 'Routinery', // The name shown on the Android Launcher.
+    name: 'DayGuide', // The application name.
+    launcherName: 'DayGuide', // The name shown on the Android Launcher.
     themeColor: '#101011', // The color used for the status bar.
     themeColorDark: '#101011', // The color used for the dark status bar.
     navigationColor: '#101011', // The color used for the navigation bar.
@@ -57,8 +57,8 @@ android {
         applicationId "com.advikchaba.routinery"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "1.0.2"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -76,12 +76,12 @@ android {
             // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
             // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
             // the TWA, as it will probably give a better user experience for non-mobile devices.
-            resValue "string", "webManifestUrl", 'https://routinery-advik-chaba.vercel.app/manifest.webmanifest'
+            resValue "string", "webManifestUrl", 'https://dayguide-advik-chaba.vercel.app/manifest.webmanifest'
         
 
         
             // This is used by Meta Quest.
-            resValue "string", "fullScopeUrl", 'https://routinery-advik-chaba.vercel.app/'
+            resValue "string", "fullScopeUrl", 'https://dayguide-advik-chaba.vercel.app/'
         
 
         

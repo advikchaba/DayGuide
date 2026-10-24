@@ -116,7 +116,7 @@ export function AppLayout() {
         </main>
 
         <footer className="mx-auto max-w-6xl px-4 py-8 text-xs text-muted">
-          Routinery · Routines, coins, cosmetics and a timing ladder. Theme: {theme.name}
+          DayGuide · Routines, coins, cosmetics and a timing ladder. Theme: {theme.name}
         </footer>
       </div>
     </div>

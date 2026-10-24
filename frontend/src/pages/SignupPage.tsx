@@ -85,7 +85,7 @@ export function SignupPage() {
       if (needsEmailConfirmation) {
         setConfirmationSent(true)
       } else {
-        push('Account created. Welcome to Routinery!', 'success')
+        push('Account created. Welcome to DayGuide!', 'success')
         navigate('/onboarding', { replace: true })
       }
     } catch (err) {

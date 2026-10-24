@@ -1,4 +1,4 @@
-﻿SHA-256 checksums for Routinery Android
+SHA-256 checksums for the checked-in Android release artifacts (pre-DayGuide rename)
 Generated: 2026-10-23T21:50:20.5761448+05:30
 
 e9b70bcd480ba2d51fdac86e81d5c40664633fec44ec41d6401e536dd290c0ee  routinery-1.0.1-release.apk
