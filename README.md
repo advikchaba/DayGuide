@@ -383,12 +383,13 @@ old name, update them under **Authentication → Email Templates** as well.
 ## 8. Android app (Play Store)
 
 `mobile/` contains a Trusted Web Activity wrapper for the canonical production site. It opens the
-deployed app in Chrome and uses the same backend, auth, and data as the website.
+deployed app in Chrome, uses the same backend, auth, and data as the website, and launches in
+immersive fullscreen.
 
 * Package: `com.advikchaba.routinery` (kept unchanged so existing Play Store installs can update)
-* Version: `1.0.2` (version code `3`)
-* Next signed APK: `mobile/release/dayguide-1.0.2-release.apk`
-* Next Play Store bundle: `mobile/release/dayguide-1.0.2-release.aab`
+* Version: `1.0.3` (version code `4`)
+* Next signed APK: `mobile/release/dayguide-1.0.3-release.apk`
+* Next Play Store bundle: `mobile/release/dayguide-1.0.3-release.aab`
 * Previous pre-rename artifacts: `mobile/release/routinery-1.0.1-*`
 
 The Digital Asset Links file is deployed at
@@ -399,6 +400,10 @@ uses a different app signing certificate, add that SHA-256 fingerprint to
 > The DayGuide rename is user-facing. The Android package ID, custom reminder scheme, browser local
 > storage keys, and Supabase storage object names deliberately keep the old `routinery` identifier so
 > existing installs, sessions, and data remain valid.
+
+The production deployment sends HSTS, `X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy`, and a restrictive `Permissions-Policy` from `vercel.json`. The Android wrapper is
+HTTPS-only, disables cleartext traffic, and opts out of cloud and device-transfer backups.
 
 See [`mobile/README.md`](mobile/README.md) for signing-key custody, rebuild steps, and the Play
 Console checklist.

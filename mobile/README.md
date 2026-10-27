@@ -10,7 +10,7 @@ same deployed frontend, API, auth, and data as the website.
 | --- | --- |
 | App name | DayGuide |
 | Package ID | `com.advikchaba.routinery` |
-| Version | `1.0.2` (version code `3`) |
+| Version | `1.0.3` (version code `4`) |
 | Production host | `https://dayguide-advik-chaba.vercel.app` |
 | Start URL | `/` |
 | Minimum Android | API 24 (Android 7.0) |
@@ -26,14 +26,14 @@ label, icon, splash screen, and web host are DayGuide.
 
 ## Artifacts
 
-The checked-in `release/routinery-1.0.1-*` files are the last pre-rename builds. Rebuild after the
-DayGuide rename to produce `release/dayguide-1.0.2-release.apk` and
-`release/dayguide-1.0.2-release.aab`.
+The checked-in `release/routinery-1.0.1-*` files are the last pre-rename builds. Rebuild to produce
+`release/dayguide-1.0.3-release.apk` and `release/dayguide-1.0.3-release.aab`. Version `1.0.3`
+adds immersive fullscreen launch, HTTPS-only networking, and disabled app-data backup.
 
 | File | Purpose |
 | --- | --- |
-| `release/dayguide-1.0.2-release.apk` | Signed release APK for direct installation and testing (next build) |
-| `release/dayguide-1.0.2-release.aab` | Signed release bundle to upload to Google Play Console (next build) |
+| `release/dayguide-1.0.3-release.apk` | Signed release APK for direct installation and testing (next build) |
+| `release/dayguide-1.0.3-release.aab` | Signed release bundle to upload to Google Play Console (next build) |
 | `release/routinery-1.0.1-release.apk` | Previous signed build, kept for reference until the new APK is built |
 | `release/routinery-1.0.1-release.aab` | Previous signed bundle, kept for reference until the new AAB is built |
 | `release/SHA256SUMS.txt` | SHA-256 checksums and signing certificate fingerprint |
@@ -84,6 +84,33 @@ The native reminder code is under
 `mobile/android/app/src/main/java/com/advikchaba/routinery/`:
 `ReminderSyncActivity`, `ReminderScheduler`, `ReminderReceiver`, `BootReceiver`,
 `NotificationHelper`, `ReminderStore`, and `ReminderTask`.
+
+## Fullscreen and security
+
+Version `1.0.3` launches the Trusted Web Activity in Android immersive fullscreen:
+
+- `twa-manifest.json` uses `"display": "fullscreen"`.
+- `LauncherActivity` has the `android.support.customtabs.trusted.DISPLAY_MODE` metadata set to
+  `immersive`.
+- The web app manifest and the bundled ChromeOS/Meta Quest copy also use `"display": "fullscreen"`.
+
+The Android wrapper is hardened as follows:
+
+- The TWA is bound to the canonical `https://dayguide-advik-chaba.vercel.app` origin with Digital
+  Asset Links and starts at that origin with the browser-less UI.
+- Cleartext traffic is disabled in both the manifest and `res/xml/network_security_config.xml`.
+  The wrapper's own network policy trusts only system certificate anchors; the page content itself is
+  rendered by Chrome, so it inherits Chrome's HTTPS and certificate handling.
+- Android backup and full-backup participation are disabled, and `data_extraction_rules.xml`
+  explicitly excludes every app-data domain from Android 12+ cloud backup and D2D transfer. The
+  synced reminder schedule and app preferences are therefore not copied to another device.
+- The FileProvider, notification delegation service, FocusActivity, and WebView fallback are not
+  exported. `BootReceiver` is exported only for the protected system boot/time broadcasts.
+- `ReminderSyncActivity` is the one intentionally exported component because Chrome must launch it
+  through `routinery://sync-reminders`. It requires an exact scheme/host match, caps the payload at
+  100 KB and 200 tasks, validates task ids/titles/times, and uses immutable PendingIntents for its
+  alarms and notifications.
+- The fallback is `customtabs` (Chrome), not an embedded WebView.
 
 ## Signing key
 
@@ -185,7 +212,7 @@ one line if `update` regenerates it.
    `com.advikchaba.routinery`.
 2. Enroll in Play App Signing. Either use the existing upload key as the app signing key, or note the
    Play-managed app signing certificate and update the Digital Asset Links fingerprint.
-3. Upload `release/dayguide-1.0.2-release.aab` (or the previous bundle while testing) to an internal
+3. Upload `release/dayguide-1.0.3-release.aab` (or the previous bundle while testing) to an internal
    testing or production track.
 4. Complete the store listing: app name, short and full description, phone screenshots, a 512x512
    icon, and a 1024x500 feature graphic.

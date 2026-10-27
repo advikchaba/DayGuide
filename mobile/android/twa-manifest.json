@@ -3,7 +3,7 @@
   "host": "dayguide-advik-chaba.vercel.app",
   "name": "DayGuide",
   "launcherName": "DayGuide",
-  "display": "standalone",
+  "display": "fullscreen",
   "themeColor": "#101011",
   "themeColorDark": "#101011",
   "navigationColor": "#101011",
@@ -15,8 +15,8 @@
   "startUrl": "/",
   "iconUrl": "https://dayguide-advik-chaba.vercel.app/icons/icon-512.png",
   "maskableIconUrl": "https://dayguide-advik-chaba.vercel.app/icons/maskable-512.png",
-  "appVersion": "1.0.2",
-  "appVersionCode": 3,
+  "appVersion": "1.0.3",
+  "appVersionCode": 4,
   "signingKey": {
     "path": "../keystore/routinery-upload.jks",
     "alias": "routinery"
