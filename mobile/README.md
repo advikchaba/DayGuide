@@ -26,22 +26,22 @@ label, icon, splash screen, and web host are DayGuide.
 
 ## Artifacts
 
-The checked-in `release/routinery-1.0.1-*` files are the last pre-rename builds. Rebuild to produce
-`release/dayguide-1.0.3-release.apk` and `release/dayguide-1.0.3-release.aab`. Version `1.0.3`
-adds immersive fullscreen launch, HTTPS-only networking, and disabled app-data backup.
+The current signed build is `release/dayguide-1.0.3-*`. Version `1.0.3` adds immersive fullscreen
+launch, HTTPS-only networking, and disabled app-data backup. The older `release/routinery-1.0.1-*`
+files are kept for reference.
 
 | File | Purpose |
 | --- | --- |
-| `release/dayguide-1.0.3-release.apk` | Signed release APK for direct installation and testing (next build) |
-| `release/dayguide-1.0.3-release.aab` | Signed release bundle to upload to Google Play Console (next build) |
-| `release/routinery-1.0.1-release.apk` | Previous signed build, kept for reference until the new APK is built |
-| `release/routinery-1.0.1-release.aab` | Previous signed bundle, kept for reference until the new AAB is built |
+| `release/dayguide-1.0.3-release.apk` | Signed release APK for direct installation and testing |
+| `release/dayguide-1.0.3-release.aab` | Signed release bundle to upload to Google Play Console |
+| `release/routinery-1.0.1-release.apk` | Previous signed build, kept for reference |
+| `release/routinery-1.0.1-release.aab` | Previous signed bundle, kept for reference |
 | `release/SHA256SUMS.txt` | SHA-256 checksums and signing certificate fingerprint |
 
 Install the current APK on a connected device:
 
 ```powershell
-adb install -r mobile/release/routinery-1.0.1-release.apk
+adb install -r mobile/release/dayguide-1.0.3-release.apk
 ```
 
 The APK is standalone-signed with the upload key in this folder. It is not a debug build.
@@ -169,8 +169,6 @@ Prerequisites:
 From `mobile/android`:
 
 ```powershell
-npx @bubblewrap/cli update --skipVersionUpgrade --manifest twa-manifest.json
-
 $env:BUBBLEWRAP_KEYSTORE_PASSWORD = (Get-Content ..\keystore\CREDENTIALS.txt |
   Where-Object { $_ -like 'storePassword=*' }) -replace '^storePassword=', ''
 $env:BUBBLEWRAP_KEY_PASSWORD = (Get-Content ..\keystore\CREDENTIALS.txt |
@@ -183,10 +181,12 @@ Bubblewrap writes the signed outputs to `mobile/android/app-release-signed.apk` 
 `mobile/android/app-release-bundle.aab`. Copy them into `mobile/release/` with the versioned names
 above.
 
-The checked-in Android source started as a Bubblewrap project, but the reminder feature is a
-hand-maintained native layer. **Do not run `bubblewrap update` on this project without re-applying
-the reminder files and manifest entries**, because `update` regenerates `AndroidManifest.xml`,
-`Application.java`, and `build.gradle`.
+The checked-in Android source started as a Bubblewrap project, but the reminder feature and the
+security hardening are hand-maintained native layers. **Do not run `bubblewrap update` on this
+project without re-applying the reminder files and manifest entries.** `update` regenerates
+`AndroidManifest.xml`, `Application.java`, and `build.gradle`, which would remove the fullscreen
+metadata, backup/network hardening, exported-component flags, and reminder bridge. Build directly
+from the checked-in project instead.
 
 `bubblewrap build` checks `twa-manifest.json` against `manifest-checksum.txt` and prompts before
 applying manifest changes. If you edit `twa-manifest.json` intentionally, update the checksum to the

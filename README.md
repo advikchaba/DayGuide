@@ -388,8 +388,8 @@ immersive fullscreen.
 
 * Package: `com.advikchaba.routinery` (kept unchanged so existing Play Store installs can update)
 * Version: `1.0.3` (version code `4`)
-* Next signed APK: `mobile/release/dayguide-1.0.3-release.apk`
-* Next Play Store bundle: `mobile/release/dayguide-1.0.3-release.aab`
+* Signed APK: `mobile/release/dayguide-1.0.3-release.apk`
+* Play Store bundle: `mobile/release/dayguide-1.0.3-release.aab`
 * Previous pre-rename artifacts: `mobile/release/routinery-1.0.1-*`
 
 The Digital Asset Links file is deployed at
