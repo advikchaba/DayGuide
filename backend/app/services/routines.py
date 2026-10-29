@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from ..models import Routine, Task
+from ..models import Routine, Task, TaskCompletion
 from ..schemas import TaskIn
 
 MIN_TASK_GAP_MINUTES = 30
@@ -32,6 +34,59 @@ def _clock_gap_minutes(first: str, second: str) -> int | None:
         return None
     difference = abs(first_minutes - second_minutes)
     return min(difference, _MINUTES_PER_DAY - difference)
+
+
+def task_schedule_key(task: Task) -> tuple[int, int, int]:
+    """Chronological key used by both the checklist UI and completion guard.
+
+    Position and id keep the order deterministic when two rows somehow share a
+    time. Invalid legacy times sort after the rest of the day.
+    """
+    minutes = _minutes_since_midnight(task.scheduled_time or "09:00")
+    return (
+        _MINUTES_PER_DAY if minutes is None else minutes,
+        task.position or 0,
+        task.id,
+    )
+
+
+def ensure_sequential_completion(
+    db: Session,
+    routine: Routine,
+    target: Task,
+    user_id: str,
+    day: date,
+) -> None:
+    """Reject a check-in while an earlier task in the same routine is open.
+
+    This is deliberately server-side: hiding the checkbox in the browser is not
+    enough, because the task endpoint can still be called directly.
+    """
+    target_key = task_schedule_key(target)
+    earlier = [task for task in routine.tasks if task_schedule_key(task) < target_key]
+    if not earlier:
+        return
+
+    completed_ids = {
+        row[0]
+        for row in db.query(TaskCompletion.task_id)
+        .filter(
+            TaskCompletion.user_id == user_id,
+            TaskCompletion.done_on == day,
+            TaskCompletion.task_id.in_([task.id for task in earlier]),
+        )
+        .all()
+    }
+
+    for task in earlier:
+        if task.id not in completed_ids:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Complete '{task.title}' first. Tasks must be checked in the "
+                    "order they are scheduled."
+                ),
+            )
 
 
 def _raise_task_spacing_error(

@@ -236,6 +236,15 @@ def main() -> None:
         )
         check("spacing applies across routines", cross_routine.status_code == 400, cross_routine.text)
 
+        # Tasks unlock in scheduled order. Check the second task before the
+        # first one and the API must refuse to award anything.
+        out_of_order = client.post(
+            f"/api/tasks/{second}/complete",
+            headers=headers,
+            json={"local_time": "10:00", "local_date": TODAY},
+        )
+        check("later task is locked behind an earlier open task", out_of_order.status_code == 409, out_of_order.text)
+
         # Check the first task in at exactly its scheduled minute (zero diff).
         on_time = client.post(
             f"/api/tasks/{first}/complete",

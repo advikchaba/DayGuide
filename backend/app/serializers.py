@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from .economy import completed_task_ids, rank_for, routine_progress, today
 from .models import Match, MatchPlayer, PerfectDay, Profile, Proof, Routine, Task
+from .services.routines import task_schedule_key
 from .services.storage import public_url
 
 
@@ -62,7 +63,8 @@ def serialize_routine(
 ) -> dict:
     day = day or today()
     done_ids = completed_task_ids(db, user_id, day)
-    task_ids = [task.id for task in routine.tasks]
+    ordered_tasks = sorted(routine.tasks, key=task_schedule_key)
+    task_ids = [task.id for task in ordered_tasks]
     statuses = _today_proof_status(db, task_ids, user_id, day)
     progress = routine_progress(db, routine, user_id, day)
     perfect = (
@@ -80,7 +82,7 @@ def serialize_routine(
         "name": routine.name,
         "emoji": routine.emoji,
         "created_at": routine.created_at.isoformat(),
-        "tasks": [serialize_task(task, done_ids, statuses) for task in routine.tasks],
+        "tasks": [serialize_task(task, done_ids, statuses) for task in ordered_tasks],
         "total": progress["total"],
         "done": progress["done"],
         "percent": progress["percent"],

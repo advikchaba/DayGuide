@@ -6,6 +6,7 @@ import { ReminderSyncCard } from '../components/ReminderSyncCard'
 import { Avatar, Badge, Button, Card, CoinPill, EmptyState, ProgressBar, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import {
+  compareTaskSchedule,
   findSpacingConflict,
   localDateString,
   localTimeString,
@@ -13,6 +14,7 @@ import {
   nextSlot,
   spacingConflictMessage,
 } from '../lib/time'
+import { emitTasksChanged } from '../lib/notifications'
 import type { Reward, Routine, Task, TaskCompleteResponse } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useToast } from '../state/ToastContext'
@@ -41,6 +43,27 @@ export function RoutinePage() {
     [routines, activeId],
   )
 
+  const orderedTasks = useMemo(
+    () => [...(active?.tasks ?? [])].sort(compareTaskSchedule),
+    [active],
+  )
+
+  const firstIncomplete = useMemo(
+    () => orderedTasks.find((task) => !task.completed_today) ?? null,
+    [orderedTasks],
+  )
+
+  const lockedTasks = useMemo(() => {
+    const locked = new Map<number, string>()
+    if (!firstIncomplete) return locked
+    for (const task of orderedTasks) {
+      if (!task.completed_today && compareTaskSchedule(task, firstIncomplete) > 0) {
+        locked.set(task.id, firstIncomplete.title)
+      }
+    }
+    return locked
+  }, [orderedTasks, firstIncomplete])
+
   const load = useCallback(async () => {
     try {
       const data = await api.get<Routine[]>(`/routines?local_date=${localDateString()}`)
@@ -59,6 +82,7 @@ export function RoutinePage() {
 
   const replaceRoutine = (next: Routine) => {
     setRoutines((current) => current.map((routine) => (routine.id === next.id ? next : routine)))
+    emitTasksChanged()
   }
 
   const handleToggle = async (task: Task) => {
@@ -151,6 +175,7 @@ export function RoutinePage() {
     try {
       await api.del(`/tasks/${task.id}`)
       await load()
+      emitTasksChanged()
       push('Task removed.', 'info')
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not remove that task.', 'error')
@@ -259,7 +284,7 @@ export function RoutinePage() {
         <section>
           <SectionTitle
             title={active.name}
-            subtitle="Tap a task when you do it. The closer to its scheduled time, the bigger the reward."
+            subtitle="Tap a task when you do it. Tasks unlock in scheduled order, so finish the first open one before checking the next."
             action={
               active.perfect_today ? (
                 <Badge tone="success">Perfect today</Badge>
@@ -269,10 +294,23 @@ export function RoutinePage() {
             }
           />
 
+          {lockedTasks.size > 0 && firstIncomplete ? (
+            <div className="mb-3 rounded-lg bg-amber-400/10 px-3 py-2.5 text-xs font-medium text-amber-100/85">
+              Finish “{firstIncomplete.title}” first. Later tasks stay locked until every earlier
+              task is checked.
+            </div>
+          ) : null}
+
           <ul className="space-y-2.5">
-            {active.tasks.map((task) => (
+            {orderedTasks.map((task) => (
               <div key={task.id} className="group relative">
-                <TaskRow task={task} busy={busyTask === task.id} onToggle={handleToggle} />
+                <TaskRow
+                  task={task}
+                  busy={busyTask === task.id}
+                  locked={lockedTasks.has(task.id)}
+                  lockReason={lockedTasks.get(task.id)}
+                  onToggle={handleToggle}
+                />
                 <button
                   type="button"
                   onClick={() => handleDeleteTask(task)}

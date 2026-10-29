@@ -353,7 +353,7 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/75" onClick={onClose} aria-hidden />
-      <div className={`glass-solid relative z-10 w-full ${width} animate-pop p-6`}>
+      <div className={`glass-solid relative z-10 w-full ${width} animate-pop p-6`} role="dialog" aria-modal="true">
         {title ? <h3 className="mb-3 text-lg font-bold">{title}</h3> : null}
         <div className="text-sm text-ink">{children}</div>
         {footer ? <div className="mt-5 flex justify-end gap-2">{footer}</div> : null}

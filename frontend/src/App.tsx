@@ -4,8 +4,10 @@ import { AdminDashboardPage } from './admin/AdminDashboardPage'
 import { AdminRoute } from './admin/AdminRoute'
 import { AppLayout } from './components/AppLayout'
 import { GuestRoute } from './components/GuestRoute'
+import { NotificationCenter } from './components/NotificationCenter'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { SessionLoading } from './components/SessionLoading'
+import { useImmersiveFullscreen } from './lib/fullscreen'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { LandingPage } from './pages/LandingPage'
 import { LeaderboardPage } from './pages/LeaderboardPage'
@@ -65,9 +67,12 @@ function ThemeSync() {
 }
 
 export default function App() {
+  useImmersiveFullscreen()
+
   return (
     <>
       <ThemeSync />
+      <NotificationCenter />
       <Routes>
         <Route path="/" element={<RootPage />} />
         <Route

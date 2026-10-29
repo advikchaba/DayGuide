@@ -22,7 +22,12 @@ from ..economy import (
 from ..models import Profile, Routine, Task, TaskCompletion
 from ..schemas import CompletionIn, RoutineIn, RoutineUpdate, TaskCompleteOut, TaskIn
 from ..serializers import serialize_routine
-from ..services.routines import ensure_task_spacing, get_owned_routine, get_owned_task
+from ..services.routines import (
+    ensure_sequential_completion,
+    ensure_task_spacing,
+    get_owned_routine,
+    get_owned_task,
+)
 
 router = APIRouter(tags=["routines"])
 
@@ -208,6 +213,8 @@ def complete_task(
     )
 
     if not existing:
+        ensure_sequential_completion(db, routine, task, profile.id, day)
+
         actual_time = _local_time(payload)
         on_time, difference, elo = timing_reward(scheduled_time, actual_time)
         coins = max(COINS_PER_TASK, task.coin_value) if on_time else 0

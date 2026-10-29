@@ -10,7 +10,7 @@ same deployed frontend, API, auth, and data as the website.
 | --- | --- |
 | App name | DayGuide |
 | Package ID | `com.advikchaba.routinery` |
-| Version | `1.0.3` (version code `4`) |
+| Version | `1.0.4` (version code `5`) |
 | Production host | `https://dayguide-advik-chaba.vercel.app` |
 | Start URL | `/` |
 | Minimum Android | API 24 (Android 7.0) |
@@ -26,59 +26,79 @@ label, icon, splash screen, and web host are DayGuide.
 
 ## Artifacts
 
-The current signed build is `release/dayguide-1.0.3-*`. Version `1.0.3` adds immersive fullscreen
-launch, HTTPS-only networking, and disabled app-data backup. The older `release/routinery-1.0.1-*`
-files are kept for reference.
+The current signed build is `release/dayguide-1.0.4-*`. Version `1.0.4` adds the post-sign-in
+notification prompt, sequential task unlocking, the browser reminder scheduler, and a web Fullscreen
+API fallback for devices where Chrome ignores the TWA immersive flag. The older
+`release/dayguide-1.0.3-*` and `release/routinery-1.0.1-*` files are kept for reference.
 
 | File | Purpose |
 | --- | --- |
-| `release/dayguide-1.0.3-release.apk` | Signed release APK for direct installation and testing |
-| `release/dayguide-1.0.3-release.aab` | Signed release bundle to upload to Google Play Console |
-| `release/routinery-1.0.1-release.apk` | Previous signed build, kept for reference |
-| `release/routinery-1.0.1-release.aab` | Previous signed bundle, kept for reference |
+| `release/dayguide-1.0.4-release.apk` | Signed release APK for direct installation and testing |
+| `release/dayguide-1.0.4-release.aab` | Signed release bundle to upload to Google Play Console |
+| `release/dayguide-1.0.3-release.apk` | Previous signed build, kept for reference |
+| `release/dayguide-1.0.3-release.aab` | Previous signed bundle, kept for reference |
+| `release/routinery-1.0.1-release.apk` | Older signed build, kept for reference |
+| `release/routinery-1.0.1-release.aab` | Older signed bundle, kept for reference |
 | `release/SHA256SUMS.txt` | SHA-256 checksums and signing certificate fingerprint |
 
 Install the current APK on a connected device:
 
 ```powershell
-adb install -r mobile/release/dayguide-1.0.3-release.apk
+adb install -r mobile/release/dayguide-1.0.4-release.apk
 ```
 
 The APK is standalone-signed with the upload key in this folder. It is not a debug build.
 
 ## Task reminders
 
-DayGuide has native task reminders. They are local Android notifications, not web push, so they
-work while DayGuide is closed and do not need a server scheduler.
+DayGuide asks for notification permission after sign-in (or on the first visit for an existing
+account). There are two delivery paths:
 
-How it works:
+- **Website:** the browser scheduler shows a notification at each task's scheduled time while the
+  DayGuide page is open. A minimal service worker (`frontend/public/sw.js`) displays the notification
+  and focuses/opens `/app` when it is clicked. This path does not use web push.
+- **Android app:** the APK uses native `AlarmManager` alarms, so reminders keep working when the app
+  is closed. The web page hands the schedule to the APK through `routinery://sync-reminders`.
 
-1. Open DayGuide on Android and tap **Sync Android reminders** on the Routine or Profile page.
-2. The web app hands the current task titles and `HH:MM` times to the APK through
+The setup prompt opens automatically once per account and platform:
+
+1. Sign in or create an account. The notification modal appears after the profile loads.
+2. Tap **Enable notifications** on the website, or **Open Android setup** in the Android app.
+3. On Android, `ReminderSyncActivity` requests `POST_NOTIFICATIONS` and opens the Alarms & reminders
+   settings page for `SCHEDULE_EXACT_ALARM`, then stores the schedule.
+4. The **Task reminders** card on Routine and Profile shows the current status, a browser test
+   button, and a manual **Sync Android reminders** button.
+
+The native schedule is local, not web push:
+
+1. The web app sends the current task titles and `HH:MM` times to the APK through
    `routinery://sync-reminders`.
-3. The APK stores the schedule in `SharedPreferences` and schedules one `AlarmManager` alarm per
+2. The APK stores the schedule in `SharedPreferences` and schedules one `AlarmManager` alarm per
    task. After a notification fires, the next day's alarm is armed automatically.
-4. Rebooting, changing the device time zone, and updating the app re-arm the stored schedule.
+3. Rebooting, changing the device time zone, and updating the app re-arm the stored schedule.
    Opening the app also re-arms it after Android force-stops the package.
 
 Android permissions:
 
-- **Notifications** (`POST_NOTIFICATIONS`, Android 13+): requested the first time reminders are
-  synced.
-- **Alarms & reminders** (`SCHEDULE_EXACT_ALARM`, Android 12+): requested during sync. If it is
+- **Notifications** (`POST_NOTIFICATIONS`, Android 13+): requested when Android setup is opened.
+- **Alarms & reminders** (`SCHEDULE_EXACT_ALARM`, Android 12+): requested during setup. If it is
   denied, reminders still schedule but Android may delay them; the notification includes a shortcut
   to grant exact timing later.
 - **Start at boot** (`RECEIVE_BOOT_COMPLETED`): re-arms reminders after a reboot.
 
 Limitations:
 
+- Browser reminders require the website to stay open. Delivering a notification after the browser is
+  fully closed would require web push plus a server-side scheduler and is intentionally not included.
 - The native APK cannot read Chrome's task storage. The web page must send the schedule, so tap
-  **Sync Android reminders** again after adding, removing, or retiming tasks.
-- A task that is completed after the last sync can still produce its reminder. The app has no
+  **Sync Android reminders** again after adding, removing, or retiming tasks. The card shows a
+  **Sync needed after schedule changes** badge when the stored fingerprint is stale.
+- A task that is completed after the last native sync can still produce its reminder. The app has no
   completion channel back into the native alarm.
 - Force-stopping the app in Android Settings cancels its alarms. Open DayGuide again to re-arm
   them.
-- This is an Android-only feature. The web build shows the sync card only on Android.
+- If native Android reminders are configured, the web scheduler skips duplicate browser alerts on
+  that device.
 
 The native reminder code is under
 `mobile/android/app/src/main/java/com/advikchaba/routinery/`:
@@ -87,12 +107,16 @@ The native reminder code is under
 
 ## Fullscreen and security
 
-Version `1.0.3` launches the Trusted Web Activity in Android immersive fullscreen:
+Version `1.0.4` launches the Trusted Web Activity in Android immersive fullscreen:
 
 - `twa-manifest.json` uses `"display": "fullscreen"`.
 - `LauncherActivity` has the `android.support.customtabs.trusted.DISPLAY_MODE` metadata set to
   `immersive`.
-- The web app manifest and the bundled ChromeOS/Meta Quest copy also use `"display": "fullscreen"`.
+- The splash uses the fullscreen `LaunchTheme`.
+- The web manifest, the bundled ChromeOS/Meta Quest copy, and `display_override` all request
+  `fullscreen` with `standalone` as a fallback.
+- If Chrome still shows browser or system bars, `frontend/src/lib/fullscreen.ts` enters the
+  Fullscreen API on the first tap. This is a fallback; the TWA immersive flag is the primary path.
 
 The Android wrapper is hardened as follows:
 
@@ -139,9 +163,9 @@ https://dayguide-advik-chaba.vercel.app/.well-known/assetlinks.json
 ```
 
 It currently contains the fingerprint above, so a build targeting the new host opens without a
-browser address bar when installed directly. The checked-in `release/routinery-1.0.1-*` artifacts
-still target the old host (which now redirects to the canonical host); rebuild and install the new
-APK before testing the browser-less TWA experience.
+browser address bar when installed directly. Install `release/dayguide-1.0.4-release.apk` before
+testing the browser-less TWA experience; the older artifacts still target the previous host or lack
+the new notification behavior.
 
 Google Play App Signing normally re-signs the app with a Play-managed app signing certificate. If
 the Play Console uses a different certificate from this upload key, add the Play Console **app
@@ -164,22 +188,58 @@ Prerequisites:
 - JDK 17
 - Android SDK with platform 36 and build-tools 36.1.0
 - Node.js 18+
-- Bubblewrap: `npx @bubblewrap/cli`
+- Bubblewrap is not required for normal builds; this project is built directly from the
+  hand-maintained Gradle project.
 
 From `mobile/android`:
 
 ```powershell
-$env:BUBBLEWRAP_KEYSTORE_PASSWORD = (Get-Content ..\keystore\CREDENTIALS.txt |
-  Where-Object { $_ -like 'storePassword=*' }) -replace '^storePassword=', ''
-$env:BUBBLEWRAP_KEY_PASSWORD = (Get-Content ..\keystore\CREDENTIALS.txt |
-  Where-Object { $_ -like 'keyPassword=*' }) -replace '^keyPassword=', ''
+$env:JAVA_HOME = 'C:\path\to\jdk-17'
+$env:ANDROID_HOME = 'C:\path\to\android-sdk'
+$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 
-npx @bubblewrap/cli build
+.\gradlew.bat assembleRelease bundleRelease --no-daemon
 ```
 
-Bubblewrap writes the signed outputs to `mobile/android/app-release-signed.apk` and
-`mobile/android/app-release-bundle.aab`. Copy them into `mobile/release/` with the versioned names
-above.
+Gradle writes the unsigned APK and bundle here:
+
+- `app/build/outputs/apk/release/app-release-unsigned.apk`
+- `app/build/outputs/bundle/release/app-release.aab`
+
+Sign both with the upload key, using the passwords from the local-only credentials file:
+
+```powershell
+$storePass = (Get-Content ..\keystore\CREDENTIALS.txt |
+  Where-Object { $_ -like 'storePassword=*' } |
+  Select-Object -First 1) -replace '^storePassword=', ''
+$keyPass = (Get-Content ..\keystore\CREDENTIALS.txt |
+  Where-Object { $_ -like 'keyPassword=*' } |
+  Select-Object -First 1) -replace '^keyPassword=', ''
+
+& "$env:ANDROID_HOME\build-tools\36.1.0\apksigner.bat" sign `
+  --ks ..\keystore\routinery-upload.jks --ks-key-alias routinery `
+  --ks-pass "pass:$storePass" --key-pass "pass:$keyPass" `
+  --out ..\release\dayguide-1.0.4-release.apk `
+  app\build\outputs\apk\release\app-release-unsigned.apk
+
+& "$env:JAVA_HOME\bin\jarsigner.exe" `
+  -keystore ..\keystore\routinery-upload.jks `
+  -storepass $storePass -keypass $keyPass `
+  -sigalg SHA256withRSA -digestalg SHA-256 `
+  -signedjar ..\release\dayguide-1.0.4-release.aab `
+  app\build\outputs\bundle\release\app-release.aab routinery
+```
+
+Verify the package/version and certificate before publishing:
+
+```powershell
+& "$env:ANDROID_HOME\build-tools\36.1.0\apksigner.bat" verify --print-certs `
+  ..\release\dayguide-1.0.4-release.apk
+
+& "$env:ANDROID_HOME\build-tools\36.1.0\aapt2.exe" dump badging `
+  ..\release\dayguide-1.0.4-release.apk |
+  Select-String 'package:|application-label:'
+```
 
 The checked-in Android source started as a Bubblewrap project, but the reminder feature and the
 security hardening are hand-maintained native layers. **Do not run `bubblewrap update` on this
@@ -188,9 +248,8 @@ project without re-applying the reminder files and manifest entries.** `update` 
 metadata, backup/network hardening, exported-component flags, and reminder bridge. Build directly
 from the checked-in project instead.
 
-`bubblewrap build` checks `twa-manifest.json` against `manifest-checksum.txt` and prompts before
-applying manifest changes. If you edit `twa-manifest.json` intentionally, update the checksum to the
-SHA-1 of the file first, or run the interactive prompt and then restore the native additions:
+`bubblewrap`/the TWA tooling may check `twa-manifest.json` against `manifest-checksum.txt`. If you
+edit `twa-manifest.json` intentionally, update the checksum to the SHA-1 of the file:
 
 ```powershell
 $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path twa-manifest.json))
@@ -212,7 +271,7 @@ one line if `update` regenerates it.
    `com.advikchaba.routinery`.
 2. Enroll in Play App Signing. Either use the existing upload key as the app signing key, or note the
    Play-managed app signing certificate and update the Digital Asset Links fingerprint.
-3. Upload `release/dayguide-1.0.3-release.aab` (or the previous bundle while testing) to an internal
+3. Upload `release/dayguide-1.0.4-release.aab` (or the previous bundle while testing) to an internal
    testing or production track.
 4. Complete the store listing: app name, short and full description, phone screenshots, a 512x512
    icon, and a 1024x500 feature graphic.

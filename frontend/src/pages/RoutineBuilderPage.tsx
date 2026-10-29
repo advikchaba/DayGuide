@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge, Button, Card, Field, SectionTitle } from '../components/ui'
 import { api, ApiError } from '../lib/api'
+import { emitTasksChanged } from '../lib/notifications'
 import type { Routine } from '../lib/types'
 import {
   findPairwiseSpacingConflict,
@@ -126,6 +127,7 @@ export function RoutineBuilderPage() {
           coin_value: task.coin_value,
         })),
       })
+      emitTasksChanged()
       push('Routine created. Check tasks in at their scheduled times.', 'success')
       navigate('/app')
     } catch (error) {

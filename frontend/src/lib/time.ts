@@ -16,6 +16,27 @@ export function timeToMinutes(hhmm: string): number | null {
   return Number(match[1]) * 60 + Number(match[2])
 }
 
+export interface ScheduledTask {
+  id: number
+  scheduled_time: string
+  position: number
+}
+
+/**
+ * Same chronological key as the backend completion guard. Position and id make
+ * the order deterministic for equal times; invalid legacy times sort last.
+ */
+export function taskScheduleKey(task: ScheduledTask): [number, number, number] {
+  const minutes = timeToMinutes(task.scheduled_time)
+  return [minutes == null ? Number.MAX_SAFE_INTEGER : minutes, task.position, task.id]
+}
+
+export function compareTaskSchedule(first: ScheduledTask, second: ScheduledTask): number {
+  const a = taskScheduleKey(first)
+  const b = taskScheduleKey(second)
+  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2]
+}
+
 /** Shortest gap between two wall-clock times, wrapping across midnight. */
 export function clockGapMinutes(first: string, second: string): number | null {
   const firstMinutes = timeToMinutes(first)

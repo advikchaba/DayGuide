@@ -15,8 +15,8 @@
   "startUrl": "/",
   "iconUrl": "https://dayguide-advik-chaba.vercel.app/icons/icon-512.png",
   "maskableIconUrl": "https://dayguide-advik-chaba.vercel.app/icons/maskable-512.png",
-  "appVersion": "1.0.3",
-  "appVersionCode": 4,
+  "appVersion": "1.0.4",
+  "appVersionCode": 5,
   "signingKey": {
     "path": "../keystore/routinery-upload.jks",
     "alias": "routinery"

@@ -1,11 +1,13 @@
 SHA-256 checksums for the checked-in Android release artifacts
-Generated: 2026-10-27T23:46:00+05:30
+Generated: 2026-10-29T21:00:00+05:30
 
-eb462a26f70fdb8b766de380b9fbb91643b53ee2c41b638a74d45b406b738b50  dayguide-1.0.3-release.apk
+e66e36e7cc21c0818c2dac8b9a02f5f9560d8c405fe11269b13124f698c9264e  dayguide-1.0.4-release.aab
+23df5fca6beb6ec02177d8eaf24e6bea591379f937af9abc453bdb16a3bd5919  dayguide-1.0.4-release.apk
 dbd5da909946f9ad05dab1960d08273af8ace4da899c3c8e74ee8176a350b70d  dayguide-1.0.3-release.aab
-e9b70bcd480ba2d51fdac86e81d5c40664633fec44ec41d6401e536dd290c0ee  routinery-1.0.1-release.apk
+eb462a26f70fdb8b766de380b9fbb91643b53ee2c41b638a74d45b406b738b50  dayguide-1.0.3-release.apk
 58a495909f7414cca1abc83bac6670f50220d35b28809a8e6b76ca5f93b7bd60  routinery-1.0.1-release.aab
-6d6e7c0d2a07e65ad0da3d74b27b5d9745865bd4e66a328625209f80e8a5cfe4  routinery-1.0.0-release.apk
+e9b70bcd480ba2d51fdac86e81d5c40664633fec44ec41d6401e536dd290c0ee  routinery-1.0.1-release.apk
 d906e06f207229fe514f1e31bd81b3a896171f1f308ade030a2438d67dda6e61  routinery-1.0.0-release.aab
+6d6e7c0d2a07e65ad0da3d74b27b5d9745865bd4e66a328625209f80e8a5cfe4  routinery-1.0.0-release.apk
 
 APK certificate SHA-256: E3F53A1FD7453E77E213BA7A29A500FD0B6208EABD11A4B68283B4ED075D2962
