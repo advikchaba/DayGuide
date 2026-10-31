@@ -948,6 +948,77 @@ def main() -> None:
                 settings.supabase_jwt_secret,
             ) = original_supabase
 
+        print("\n== task removal ==")
+        removal_headers = auth(replacement_session["access_token"])
+        removal_routine = client.post(
+            "/api/routines",
+            headers=removal_headers,
+            json={
+                "name": "Removal Test",
+                "tasks": [
+                    {"title": "Completed task to remove", "scheduled_time": "23:00"},
+                    {"title": "Open task to remove", "scheduled_time": "23:30"},
+                ],
+            },
+        )
+        check(
+            "removal fixture routine created",
+            removal_routine.status_code == 201,
+            removal_routine.text,
+        )
+        removal_payload = removal_routine.json()
+        completed_task = removal_payload["tasks"][0]
+        open_task = removal_payload["tasks"][1]
+
+        checked_in = client.post(
+            f"/api/tasks/{completed_task['id']}/complete",
+            headers=removal_headers,
+            json={"local_time": "23:00", "local_date": TODAY},
+        )
+        check("removal fixture task checked in", checked_in.status_code == 200, checked_in.text)
+
+        removed_completed = client.delete(
+            f"/api/tasks/{completed_task['id']}", headers=removal_headers
+        )
+        check(
+            "a completed task can be removed",
+            removed_completed.status_code == 204,
+            removed_completed.text,
+        )
+
+        removed_open = client.delete(
+            f"/api/tasks/{open_task['id']}", headers=removal_headers
+        )
+        check(
+            "an open task can be removed",
+            removed_open.status_code == 204,
+            removed_open.text,
+        )
+
+        remaining = client.get(
+            "/api/routines", params={"local_date": TODAY}, headers=removal_headers
+        )
+        removal_after = next(
+            (
+                routine
+                for routine in remaining.json()
+                if routine["id"] == removal_payload["id"]
+            ),
+            None,
+        )
+        check(
+            "removed tasks disappear from the routine",
+            removal_after is not None and removal_after["tasks"] == [],
+            removal_after,
+        )
+        check(
+            "deleting an already-removed task returns 404",
+            client.delete(
+                f"/api/tasks/{completed_task['id']}", headers=removal_headers
+            ).status_code
+            == 404,
+        )
+
         print(f"\nAll {len(PASSED)} checks passed.")
 
 

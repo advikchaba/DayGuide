@@ -189,7 +189,7 @@ def delete_task(
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> Response:
-    task, _routine = _own_task(db, task_id, profile.id)
+    task, _routine = get_owned_task(db, task_id, profile.id)
     db.delete(task)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
