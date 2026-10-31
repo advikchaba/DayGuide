@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from .economy import completed_task_ids, rank_for, routine_progress, today
 from .models import Match, MatchPlayer, PerfectDay, Profile, Proof, Routine, Task
-from .services.routines import task_schedule_key
+from .services.routines import first_started_routine, task_schedule_key
 from .services.storage import public_url
 
 
@@ -77,6 +77,8 @@ def serialize_routine(
         .one_or_none()
         is not None
     )
+    started = first_started_routine(db, user_id, day)
+    locked_today = bool(started and started[0] != routine.id)
     return {
         "id": routine.id,
         "name": routine.name,
@@ -87,6 +89,9 @@ def serialize_routine(
         "done": progress["done"],
         "percent": progress["percent"],
         "perfect_today": perfect,
+        "locked_today": locked_today,
+        "locked_by_routine_id": started[0] if locked_today else None,
+        "locked_by_routine": started[1] if locked_today else None,
     }
 
 

@@ -150,8 +150,8 @@ export function LeaderboardPage() {
           </Card>
 
           <p className="text-xs text-muted">
-            Ranked points come from checking tasks in near their scheduled time. Inside 20 minutes earns +45 to +50 ELO;
-            further off costs -10 to -30 ELO.
+            Ranked points come from checking tasks in near their scheduled time. Inside 20 minutes earns +30 to +50 ELO;
+            outside it, every minute off costs 2 ELO (30 minutes late is -60).
           </p>
         </>
       )}

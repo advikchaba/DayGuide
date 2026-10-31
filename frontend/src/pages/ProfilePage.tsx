@@ -230,8 +230,8 @@ export function ProfilePage() {
         <Card>
           <SectionTitle title="How ELO works" subtitle="Your check-in time is the score." />
           <ul className="space-y-2 text-sm text-muted">
-            <li>Inside the 20 minute window: +45 to +50 ELO, scaled by accuracy.</li>
-            <li>More than 20 minutes off: -10 to -30 ELO, scaled by the gap.</li>
+            <li>Inside the 20 minute window: +30 to +50 ELO. Each minute off costs 1.</li>
+            <li>Outside the window: every minute off costs 2 ELO (30 minutes late is -60).</li>
             <li>On-time check-ins also earn coins. Late check-ins earn none.</li>
             <li>Un-ticking a task reverses both its coins and its ELO.</li>
           </ul>

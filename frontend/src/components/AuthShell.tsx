@@ -31,8 +31,8 @@ export function AuthShell({
 
             <ul className="mt-8 space-y-4 text-sm">
               {[
-                'Timed tasks with +45 to +50 ELO for accurate check-ins',
-                'More than 20 minutes off costs -10 to -30 ELO',
+                'Timed tasks with +30 to +50 ELO for accurate check-ins',
+                'Outside the 20-minute window, every minute off costs 2 ELO',
                 '+200 coins for a perfect, fully on-time day',
               ].map((text, index) => (
                 <li key={text} className="flex gap-3">

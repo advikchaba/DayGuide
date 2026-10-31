@@ -58,6 +58,7 @@ settings.admin_emails = ADMIN_EMAIL
 settings.upload_dir = os.environ["UPLOAD_DIR"]
 
 from app.auth import _admin_claim  # noqa: E402
+from app.economy import timing_reward  # noqa: E402
 from app.main import app  # noqa: E402
 
 PASSED: list[str] = []
@@ -97,6 +98,14 @@ def main() -> None:
         check("rank ladder exposed", len(config["ranks"]) == 6, config["ranks"])
         check("perfect routine pays 200 coins", config["economics"]["perfect_routine_coins"] == 200)
         check("timing window is 20 minutes", config["economics"]["on_time_window_minutes"] == 20)
+        check("inside-window ELO is +30 to +50", config["economics"]["on_time_elo_min"] == 30 and config["economics"]["on_time_elo_max"] == 50)
+        check("outside-window penalty is doubled", config["economics"]["late_elo_multiplier"] == 2)
+        check("exact timing earns +50 ELO", timing_reward("09:00", "09:00")[2] == 50)
+        check("10 minutes off earns +40 ELO", timing_reward("09:00", "09:10")[2] == 40)
+        check("20 minutes off earns +30 ELO", timing_reward("09:00", "09:20")[2] == 30)
+        check("21 minutes off costs -42 ELO", timing_reward("09:00", "09:21")[2] == -42)
+        check("30 minutes off costs -60 ELO", timing_reward("09:00", "09:30")[2] == -60)
+        check("early and late distance use the same rule", timing_reward("09:00", "08:40")[2] == 30)
         check(
             "server-controlled app_metadata can grant admin",
             _admin_claim({"app_metadata": {"role": "admin"}}),
@@ -156,6 +165,33 @@ def main() -> None:
         )
         check("profile picture change costs 100 coins", blocked_upload.status_code == 400, blocked_upload.text)
 
+        print("\n== task spacing ==")
+        dense_first = client.post(
+            "/api/routines",
+            headers=headers,
+            json={
+                "name": "Too Dense",
+                "tasks": [
+                    {"title": "Minute one", "scheduled_time": "12:15"},
+                    {"title": "Minute two", "scheduled_time": "12:30"},
+                ],
+            },
+        )
+        check("first routine rejects tasks under 30 minutes apart", dense_first.status_code == 400, dense_first.text)
+
+        midnight_first = client.post(
+            "/api/routines",
+            headers=headers,
+            json={
+                "name": "Midnight Dense",
+                "tasks": [
+                    {"title": "Late night", "scheduled_time": "23:50"},
+                    {"title": "Early morning", "scheduled_time": "00:10"},
+                ],
+            },
+        )
+        check("first-routine spacing wraps across midnight", midnight_first.status_code == 400, midnight_first.text)
+
         print("\n== timed routine ==")
         created = client.post(
             "/api/routines",
@@ -173,39 +209,12 @@ def main() -> None:
         first, second = [task["id"] for task in routine["tasks"]]
         check("scheduled times persisted", [t["scheduled_time"] for t in routine["tasks"]] == ["09:00", "10:00"], routine["tasks"])
 
-        print("\n== task spacing ==")
-        too_close = client.post(
-            "/api/routines",
-            headers=headers,
-            json={
-                "name": "Too Dense",
-                "tasks": [
-                    {"title": "Minute one", "scheduled_time": "12:15"},
-                    {"title": "Minute two", "scheduled_time": "12:30"},
-                ],
-            },
-        )
-        check("tasks under 30 minutes apart rejected", too_close.status_code == 400, too_close.text)
-
-        chained = client.post(
-            "/api/routines",
-            headers=headers,
-            json={
-                "name": "Midnight Dense",
-                "tasks": [
-                    {"title": "Late night", "scheduled_time": "23:50"},
-                    {"title": "Early morning", "scheduled_time": "00:10"},
-                ],
-            },
-        )
-        check("spacing wraps across midnight", chained.status_code == 400, chained.text)
-
         too_close_add = client.post(
             f"/api/routines/{routine['id']}/tasks",
             headers=headers,
             json={"title": "Squeezed in", "scheduled_time": "09:15"},
         )
-        check("task too close to an existing task rejected", too_close_add.status_code == 400, too_close_add.text)
+        check("task too close to an existing first-routine task rejected", too_close_add.status_code == 400, too_close_add.text)
 
         added = client.post(
             f"/api/routines/{routine['id']}/tasks",
@@ -220,7 +229,7 @@ def main() -> None:
             headers=headers,
             json={"title": "Exactly thirty", "scheduled_time": "09:15"},
         )
-        check("updating a task into a conflict rejected", update_conflict.status_code == 400, update_conflict.text)
+        check("updating a first-routine task into a conflict rejected", update_conflict.status_code == 400, update_conflict.text)
 
         update_ok = client.patch(
             f"/api/tasks/{added_task['id']}",
@@ -229,12 +238,35 @@ def main() -> None:
         )
         check("moving a task to a free slot accepted", update_ok.status_code == 200, update_ok.text)
 
-        cross_routine = client.post(
+        dense_later = client.post(
+            "/api/routines",
+            headers=headers,
+            json={
+                "name": "Dense Later",
+                "tasks": [
+                    {"title": "Minute one", "scheduled_time": "12:15"},
+                    {"title": "Minute two", "scheduled_time": "12:30"},
+                ],
+            },
+        )
+        check("additional routines can use any times", dense_later.status_code == 201, dense_later.text)
+        dense_later_payload = dense_later.json()
+
+        overlap = client.post(
             "/api/routines",
             headers=headers,
             json={"name": "Overlap", "tasks": [{"title": "Clash", "scheduled_time": "09:00"}]},
         )
-        check("spacing applies across routines", cross_routine.status_code == 400, cross_routine.text)
+        check("additional routines can overlap the first", overlap.status_code == 201, overlap.text)
+        overlap_payload = overlap.json()
+        overlap_task_id = overlap_payload["tasks"][0]["id"]
+
+        later_add = client.post(
+            f"/api/routines/{dense_later_payload['id']}/tasks",
+            headers=headers,
+            json={"title": "Same as first", "scheduled_time": "09:00"},
+        )
+        check("later routines can add tasks at a first-routine time", later_add.status_code == 201, later_add.text)
 
         # Tasks unlock in scheduled order. Check the second task before the
         # first one and the API must refuse to award anything.
@@ -255,22 +287,60 @@ def main() -> None:
         check("on-time task pays +50 ELO", on_time["elo"] == 50, on_time)
         check("on-time task is flagged", on_time["on_time"] is True, on_time)
 
-        # The second task is two hours late, so the day cannot be perfect.
+        # Starting one routine locks every other routine for the day.
+        after_start = client.get("/api/routines", params={"local_date": TODAY}, headers=headers).json()
+        started_payload = next(item for item in after_start if item["id"] == routine["id"])
+        locked_payload = next(item for item in after_start if item["id"] == overlap_payload["id"])
+        check("the started routine stays unlocked", started_payload["locked_today"] is False, started_payload)
+        check(
+            "other routines lock once a task is checked",
+            locked_payload["locked_today"] is True
+            and locked_payload["locked_by_routine_id"] == routine["id"]
+            and locked_payload["locked_by_routine"] == "Timed Start",
+            locked_payload,
+        )
+        locked_attempt = client.post(
+            f"/api/tasks/{overlap_task_id}/complete",
+            headers=headers,
+            json={"local_time": "09:00", "local_date": TODAY},
+        )
+        check(
+            "a locked routine cannot be checked in",
+            locked_attempt.status_code == 409 and "Only one routine" in locked_attempt.json().get("detail", ""),
+            locked_attempt.text,
+        )
+
+        # The second task is 21 minutes late, so the day cannot be perfect.
         late = client.post(
             f"/api/tasks/{second}/complete",
             headers=headers,
-            json={"local_time": "12:00", "local_date": TODAY},
+            json={"local_time": "10:21", "local_date": TODAY},
         ).json()["reward"]
         check("late task pays no coins", late["coins"] == 0, late)
-        check("late task penalty is capped at -30", late["elo"] == -30, late)
+        check("outside-window task subtracts two ELO per minute", late["elo"] == -42, late)
         check("late task blocks the perfect day", late["perfect"] is False, late)
-        check("late task is flagged", late["on_time"] is False and late["time_delta_minutes"] == 120, late)
+        check("late task is flagged", late["on_time"] is False and late["time_delta_minutes"] == 21, late)
 
         # Un-tick reverses the exact deltas.
         reverted = client.delete(f"/api/tasks/{second}/complete", params={"local_date": TODAY}, headers=headers).json()["reward"]
-        check("late uncheck reverses the penalty", reverted["elo"] == 30, reverted)
+        check("late uncheck reverses the penalty", reverted["elo"] == 42, reverted)
         me = client.get("/api/me", headers=headers).json()
         check("ELO back to 150", me["elo"] == 150, me["elo"])
+
+        first_reverted = client.delete(
+            f"/api/tasks/{first}/complete",
+            params={"local_date": TODAY},
+            headers=headers,
+        ).json()["reward"]
+        check("unchecking the active routine reverses its ELO", first_reverted["elo"] == -50, first_reverted)
+        me = client.get("/api/me", headers=headers).json()
+        check("ELO back to 100 after clearing the routine", me["elo"] == 100, me["elo"])
+        after_clear = client.get("/api/routines", params={"local_date": TODAY}, headers=headers).json()
+        check(
+            "other routines unlock when no routine is active",
+            all(item["locked_today"] is False for item in after_clear),
+            after_clear,
+        )
 
         print("\n== perfect day ==")
         created = client.post(
@@ -299,12 +369,12 @@ def main() -> None:
         check("shop has 12 themes", len(themes) == 12, len(themes))
         check("shop only sells themes", all(item["kind"] == "theme" for item in shop["items"]), shop["items"])
         check("clown theme removed", "meme-clown" not in {item["slug"] for item in themes})
-        check("colour themes cost 10k", all(t["price"] == 10_000 for t in themes if t["rarity"] == "rare"), themes)
-        check("meme themes cost 20k", all(t["price"] == 20_000 for t in themes if t["rarity"] == "epic"), themes)
+        check("colour themes cost 2k", all(t["price"] == 2_000 for t in themes if t["rarity"] == "rare"), themes)
+        check("meme themes cost 5k", all(t["price"] == 5_000 for t in themes if t["rarity"] == "epic"), themes)
         check("dark + light are free", {"dark", "light"} <= {t["slug"] for t in themes if t["is_free"]})
 
         poor = client.post("/api/shop/blue/buy", headers=headers)
-        check("cannot afford 10k theme yet", poor.status_code == 400, poor.text)
+        check("cannot afford 2k theme yet", poor.status_code == 400, poor.text)
 
         equipped = client.post("/api/me/theme", json={"slug": "light"}, headers=headers).json()
         check("free theme equippable", equipped["theme_slug"] == "light", equipped)
@@ -342,12 +412,12 @@ def main() -> None:
         coins_before = replacement_payload["coins"]
         client.post("/api/shop/blue/buy", headers=headers)
         me = client.get("/api/me", headers=headers).json()
-        check("10k theme unlocked", me["theme_slug"] == "blue", me["theme_slug"])
-        check("theme charged 10,000 coins", me["coins"] == coins_before - 10_000, me["coins"])
+        check("2k theme unlocked", me["theme_slug"] == "blue", me["theme_slug"])
+        check("theme charged 2,000 coins", me["coins"] == coins_before - 2_000, me["coins"])
 
         client.post("/api/shop/meme-doge/buy", headers=headers)
         me = client.get("/api/me", headers=headers).json()
-        check("20k meme theme unlocked", me["theme_slug"] == "meme-doge", me["theme_slug"])
+        check("5k meme theme unlocked", me["theme_slug"] == "meme-doge", me["theme_slug"])
         again = client.post("/api/shop/meme-doge/buy", headers=headers)
         check("cannot buy the same item twice", again.status_code == 400, again.text)
 
@@ -368,6 +438,12 @@ def main() -> None:
         )
 
         print("\n== reports ==")
+        report_seed = client.post(
+            f"/api/tasks/{first}/complete",
+            headers=headers,
+            json={"local_time": "09:00", "local_date": TODAY},
+        )
+        check("report seed check-in accepted", report_seed.status_code == 200, report_seed.text)
         for report_range, expected_days in (("3d", 3), ("week", 7), ("month", 30)):
             response = client.get(
                 "/api/reports",
@@ -429,6 +505,9 @@ def main() -> None:
             "reports require auth",
             client.get("/api/reports", params={"range": "week"}).status_code == 401,
         )
+        client.delete(f"/api/tasks/{first}/complete", params={"local_date": TODAY}, headers=headers)
+        me = client.get("/api/me", headers=headers).json()
+        check("report seed check-in was reversed", me["elo"] == 100, me["elo"])
 
         print("\n== paid username change ==")
         before = client.get("/api/me", headers=headers).json()
@@ -598,7 +677,7 @@ def main() -> None:
             task_updated.text,
         )
         check(
-            "admin task spacing rules still apply",
+            "first-routine spacing still applies to admin edits",
             client.patch(
                 f"/api/admin/users/{target_id}/tasks/{added_admin_task['id']}",
                 json={"title": "Too close", "scheduled_time": "10:15", "coin_value": 10},

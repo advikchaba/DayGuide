@@ -120,12 +120,14 @@ function TaskEditor({
 function RoutineCard({
   userId,
   routine,
-  allTasks,
+  spacingTasks,
+  enforceSpacing,
   onChanged,
 }: {
   userId: string
   routine: Routine
-  allTasks: Task[]
+  spacingTasks: Task[]
+  enforceSpacing: boolean
   onChanged: () => Promise<void>
 }) {
   const { push } = useToast()
@@ -134,7 +136,7 @@ function RoutineCard({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [newTitle, setNewTitle] = useState('')
-  const [newTime, setNewTime] = useState(nextFreeSlot(allTasks))
+  const [newTime, setNewTime] = useState(nextFreeSlot(spacingTasks))
   const [newCoins, setNewCoins] = useState('10')
   const [adding, setAdding] = useState(false)
 
@@ -182,7 +184,7 @@ function RoutineCard({
       })
       push('Task added.', 'success')
       setNewTitle('')
-      setNewTime(nextFreeSlot([...allTasks, { title: newTitle, scheduled_time: newTime }]))
+      setNewTime(nextFreeSlot([...spacingTasks, { title: newTitle, scheduled_time: newTime }]))
       await onChanged()
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not add that task.', 'error')
@@ -249,7 +251,7 @@ function RoutineCard({
         <form onSubmit={addTask} className="glass-2 space-y-3 p-3">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Add a task</span>
-            <Badge tone="neutral">30 min spacing</Badge>
+            <Badge tone="neutral">{enforceSpacing ? '30 min spacing' : 'Any times'}</Badge>
           </div>
           <Field
             label="Title"
@@ -315,13 +317,13 @@ export function AdminRoutines({
   routines: Routine[]
   onChanged: () => Promise<void>
 }) {
-  const allTasks = routines.flatMap((routine) => routine.tasks)
+  const firstRoutineId = routines[0]?.id
 
   return (
     <Card className="space-y-4">
       <SectionTitle
         title="Routines"
-        subtitle="Edit names, tasks, scheduled times and coin values. The 30-minute spacing rule still applies."
+        subtitle="Edit names, tasks, scheduled times and coin values. Only the account's first routine keeps the 30-minute spacing rule."
       />
       {routines.length === 0 ? (
         <EmptyState
@@ -335,7 +337,8 @@ export function AdminRoutines({
               key={routine.id}
               userId={userId}
               routine={routine}
-              allTasks={allTasks}
+              spacingTasks={routine.id === firstRoutineId ? routine.tasks : []}
+              enforceSpacing={routine.id === firstRoutineId}
               onChanged={onChanged}
             />
           ))}

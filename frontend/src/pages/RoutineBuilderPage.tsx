@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge, Button, Card, Field, SectionTitle } from '../components/ui'
 import { api, ApiError } from '../lib/api'
@@ -69,6 +69,22 @@ export function RoutineBuilderPage() {
     { key: keySeed++, title: '', scheduled_time: nextSlot(), coin_value: 10 },
   ])
   const [saving, setSaving] = useState(false)
+  const [firstRoutine, setFirstRoutine] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get<Routine[]>('/routines')
+      .then((rows) => {
+        if (!cancelled) setFirstRoutine(rows.length === 0)
+      })
+      .catch(() => {
+        // Let the API enforce the first-routine spacing rule if this check fails.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const updateTask = (key: number, patch: Partial<DraftTask>) => {
     setTasks((current) => current.map((task) => (task.key === key ? { ...task, ...patch } : task)))
@@ -110,10 +126,12 @@ export function RoutineBuilderPage() {
       return
     }
 
-    const spacingConflict = findPairwiseSpacingConflict(cleaned)
-    if (spacingConflict) {
-      push(spacingPairMessage(spacingConflict[0], spacingConflict[1]), 'error')
-      return
+    if (firstRoutine) {
+      const spacingConflict = findPairwiseSpacingConflict(cleaned)
+      if (spacingConflict) {
+        push(spacingPairMessage(spacingConflict[0], spacingConflict[1]), 'error')
+        return
+      }
     }
 
     setSaving(true)
@@ -170,7 +188,9 @@ export function RoutineBuilderPage() {
           subtitle={`${tasks.filter((t) => t.title.trim()).length} task(s) · ${totalCoins} coins per fully on-time day`}
         />
         <p className="mt-2 text-xs text-muted">
-          Tasks need at least 30 minutes between scheduled times.
+          {firstRoutine
+            ? 'Your first routine needs at least 30 minutes between scheduled times.'
+            : 'Additional routines can use any times; the 30-minute spacing rule only applies to your first routine.'}
         </p>
 
         <ul className="mt-3 space-y-3">

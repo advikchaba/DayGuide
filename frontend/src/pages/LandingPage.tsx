@@ -11,15 +11,15 @@ const FEATURES = [
   },
   {
     title: 'Check in on time',
-    body: 'Tick a task near its scheduled time to earn coins and +45 to +50 ELO, scaled by how accurate you were.',
+    body: 'Tick a task near its scheduled time to earn coins and +30 to +50 ELO. Every minute off the schedule costs 1 ELO.',
   },
   {
     title: 'Miss the window',
-    body: 'More than 20 minutes off costs -10 to -30 ELO, scaled by the gap. Late check-ins earn no coins.',
+    body: 'Outside 20 minutes, every minute off costs 2 ELO instead. A task 30 minutes late loses 60 ELO. Late check-ins earn no coins.',
   },
   {
     title: 'Spend it on your profile',
-    body: 'Colour themes from 10,000 coins, meme themes for 20,000, and your own uploaded profile picture for 100. Look the part.',
+    body: 'Colour themes from 2,000 coins, meme and image themes for 5,000, and your own uploaded profile picture for 100. Look the part.',
   },
   {
     title: 'Build a streak',
@@ -107,7 +107,7 @@ export function LandingPage() {
             <CoinPill coins={200} />
             <span>for every perfect routine</span>
             <span aria-hidden>·</span>
-            <span className="font-semibold">+45 to +50 ELO</span>
+            <span className="font-semibold">+30 to +50 ELO</span>
             <span aria-hidden>·</span>
             <span>on-time check-ins</span>
           </div>
@@ -137,7 +137,7 @@ export function LandingPage() {
               {[
                 { step: '01', title: 'Build your routine', body: 'Add tasks and the exact time you plan to do each one.' },
                 { step: '02', title: 'Check in', body: 'Tap a task when you finish it. Your local time is compared with its schedule.' },
-                { step: '03', title: 'Earn or lose ELO', body: 'Inside 20 minutes earns +45 to +50. Further off deducts -10 to -30.' },
+                { step: '03', title: 'Earn or lose ELO', body: 'Inside 20 minutes earns +30 to +50. Outside it, each minute off costs 2 ELO (30 minutes late is -60).' },
                 { step: '04', title: 'Climb the ladder', body: 'Keep every task on time for a perfect day and 200 bonus coins.' },
               ].map((item) => (
                 <li key={item.step} className="glass-2 p-4">

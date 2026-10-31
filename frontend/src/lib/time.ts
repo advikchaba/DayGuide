@@ -2,7 +2,7 @@
 
 const MINUTES_PER_DAY = 24 * 60
 
-/** Every task must sit at least this far from every other scheduled task. */
+/** Tasks in the account's first routine must sit at least this far apart. */
 export const MIN_TASK_GAP_MINUTES = 30
 
 function pad(value: number): string {

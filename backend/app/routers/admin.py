@@ -213,7 +213,7 @@ def read_user(
     routines = (
         db.query(Routine)
         .filter(Routine.user_id == profile.id)
-        .order_by(Routine.created_at.asc())
+        .order_by(Routine.created_at.asc(), Routine.id.asc())
         .all()
     )
     routine_counts, task_counts = _counts_for(db, [profile.id])
@@ -442,7 +442,7 @@ def add_user_task(
 ) -> dict:
     profile = _target_profile(db, user_id)
     routine = get_owned_routine(db, routine_id, profile.id)
-    ensure_task_spacing(db, profile.id, [payload])
+    ensure_task_spacing(db, profile.id, [payload], routine_id=routine.id)
     position = max((task.position for task in routine.tasks), default=-1) + 1
     db.add(
         Task(
@@ -472,7 +472,11 @@ def update_user_task(
     task, routine = get_owned_task(db, task_id, profile.id)
     if payload.scheduled_time != task.scheduled_time:
         ensure_task_spacing(
-            db, profile.id, [payload], exclude_task_id=task.id
+            db,
+            profile.id,
+            [payload],
+            routine_id=routine.id,
+            exclude_task_id=task.id,
         )
     task.title = payload.title.strip()
     task.note = payload.note

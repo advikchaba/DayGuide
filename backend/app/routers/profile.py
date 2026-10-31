@@ -11,8 +11,7 @@ from ..database import get_db, select_for_update
 from ..economy import (
     AVATAR_CHANGE_COST,
     COINS_PER_TASK,
-    LATE_ELO_MAX,
-    LATE_ELO_MIN,
+    LATE_ELO_MULTIPLIER,
     ON_TIME_ELO_MAX,
     ON_TIME_ELO_MIN,
     ON_TIME_WINDOW_MINUTES,
@@ -225,8 +224,7 @@ def read_config() -> dict:
             "on_time_window_minutes": ON_TIME_WINDOW_MINUTES,
             "on_time_elo_min": ON_TIME_ELO_MIN,
             "on_time_elo_max": ON_TIME_ELO_MAX,
-            "late_elo_min": LATE_ELO_MIN,
-            "late_elo_max": LATE_ELO_MAX,
+            "late_elo_multiplier": LATE_ELO_MULTIPLIER,
             "username_change_cost": USERNAME_CHANGE_COST,
         },
     }

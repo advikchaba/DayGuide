@@ -222,7 +222,7 @@ export function ShopPage() {
         <p className="font-bold text-ink">How to earn coins</p>
         <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
           <li>Coins for every task checked in on time</li>
-          <li>Up to +50 ELO for accurate timing, down to -30 for missing the window</li>
+          <li>Up to +50 ELO for exact timing; outside 20 minutes it costs 2 ELO per minute</li>
           <li>+200 coins for a perfect routine, plus streak bonuses</li>
           <li>Un-ticking a task reverses its coins and ELO</li>
         </ul>

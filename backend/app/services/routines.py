@@ -89,6 +89,53 @@ def ensure_sequential_completion(
             )
 
 
+def ensure_single_routine_started(
+    db: Session,
+    routine: Routine,
+    user_id: str,
+    day: date,
+) -> None:
+    """Only the routine a user starts first may be checked in on a given day.
+
+    Starting a task commits the day to that routine. Every other routine is
+    locked until its tasks have no completions left, which stops users from
+    earning timing ELO by checking in several routines for the same day.
+    """
+    started = first_started_routine(db, user_id, day)
+    if started is None or started[0] == routine.id:
+        return
+    _, started_name = started
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            f"Only one routine can be checked in per day. Finish '{started_name}' "
+            "before starting another routine."
+        ),
+    )
+
+
+def first_started_routine(
+    db: Session,
+    user_id: str,
+    day: date,
+) -> tuple[int, str] | None:
+    """Return the routine with the day's earliest completion, if there is one."""
+    row = (
+        db.query(Routine.id, Routine.name)
+        .join(Task, Task.routine_id == Routine.id)
+        .join(TaskCompletion, TaskCompletion.task_id == Task.id)
+        .filter(
+            TaskCompletion.user_id == user_id,
+            TaskCompletion.done_on == day,
+        )
+        .order_by(TaskCompletion.created_at.asc(), TaskCompletion.id.asc())
+        .first()
+    )
+    if row is None:
+        return None
+    return int(row[0]), str(row[1])
+
+
 def _raise_task_spacing_error(
     new_task: TaskIn,
     other_title: str,
@@ -99,9 +146,9 @@ def _raise_task_spacing_error(
     raise HTTPException(
         status_code=400,
         detail=(
-            f"Tasks need at least {MIN_TASK_GAP_MINUTES} minutes between them. "
-            f"'{new_task.title.strip()}' at {new_task.scheduled_time} is too close to "
-            f"'{other_title}' at {other_time}{location}."
+            f"The first routine needs at least {MIN_TASK_GAP_MINUTES} minutes between "
+            f"tasks. '{new_task.title.strip()}' at {new_task.scheduled_time} is too close "
+            f"to '{other_title}' at {other_time}{location}."
         ),
     )
 
@@ -111,22 +158,38 @@ def ensure_task_spacing(
     user_id: str,
     new_tasks: list[TaskIn],
     *,
+    routine_id: int | None = None,
     exclude_task_id: int | None = None,
 ) -> None:
-    """Reject schedules that would put any two of a user's tasks under 30 min apart.
+    """Keep 30-minute spacing only inside the user's first routine.
 
-    The check spans every routine, so a user cannot dodge it by splitting
-    minute-by-minute tasks across several routines.
+    The first routine is the account's original day plan. Additional routines
+    can belong to other days, so they are allowed to overlap it and can use any
+    times, including tasks less than 30 minutes apart.
     """
-    existing = (
-        db.query(Task, Routine)
-        .join(Routine, Routine.id == Task.routine_id)
+    first_routine = (
+        db.query(Routine)
         .filter(Routine.user_id == user_id)
-        .all()
+        .order_by(Routine.created_at.asc(), Routine.id.asc())
+        .first()
     )
 
+    if first_routine is None:
+        # Creating the very first routine: honour the spacing rule inside it.
+        for index, new_task in enumerate(new_tasks):
+            for other in new_tasks[:index]:
+                gap = _clock_gap_minutes(new_task.scheduled_time, other.scheduled_time)
+                if gap is not None and gap < MIN_TASK_GAP_MINUTES:
+                    _raise_task_spacing_error(new_task, other.title, other.scheduled_time)
+        return
+
+    if routine_id is None or routine_id != first_routine.id:
+        return
+
+    existing = db.query(Task).filter(Task.routine_id == first_routine.id).all()
+
     for new_task in new_tasks:
-        for existing_task, existing_routine in existing:
+        for existing_task in existing:
             if existing_task.id == exclude_task_id:
                 continue
             existing_time = existing_task.scheduled_time or "09:00"
@@ -136,7 +199,7 @@ def ensure_task_spacing(
                     new_task,
                     existing_task.title,
                     existing_time,
-                    existing_routine.name,
+                    first_routine.name,
                 )
 
     for index, new_task in enumerate(new_tasks):

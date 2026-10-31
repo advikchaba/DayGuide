@@ -40,10 +40,8 @@ PERFECT_ROUTINE_ELO = 0        # ELO is now awarded per task by timing accuracy
 # --- timing rewards --------------------------------------------------------
 ON_TIME_WINDOW_MINUTES = 20    # inside this window a check-in is "on time"
 ON_TIME_ELO_MAX = 50           # exact timing
-ON_TIME_ELO_MIN = 45           # 20 minutes off
-LATE_ELO_MIN = 10              # just outside the window
-LATE_ELO_MAX = 30              # 120+ minutes off
-LATE_PENALTY_RAMP_MINUTES = 100  # minutes from 20 -> 120 to reach the max penalty
+ON_TIME_ELO_MIN = 30           # 20 minutes off (50 - 20)
+LATE_ELO_MULTIPLIER = 2        # every minute outside the window costs 2 ELO
 
 # --- ranked rewards --------------------------------------------------------
 RANKED_WIN_ELO = 50
@@ -132,19 +130,18 @@ def timing_reward(scheduled: str | None, actual: str | None) -> tuple[bool, int,
     """Score a check-in against its scheduled time.
 
     Returns ``(on_time, difference_minutes, elo_delta)``.
-    Inside the 20 minute window the reward is +50 down to +45 ELO. Outside it
-    the penalty is -10 down to -30 ELO as the gap grows to two hours.
+    The base reward is +50 ELO and each minute early or late deducts one point,
+    so the 20-minute window is worth +30 to +50. Once the check-in is outside
+    that window the full distance from the scheduled minute is charged at
+    double: 30 minutes late is -60 ELO, not -20.
+
     """
     difference = time_difference_minutes(scheduled, actual)
     if difference <= ON_TIME_WINDOW_MINUTES:
-        span = ON_TIME_ELO_MAX - ON_TIME_ELO_MIN
-        gain = round(ON_TIME_ELO_MAX - span * (difference / ON_TIME_WINDOW_MINUTES))
-        return True, difference, max(ON_TIME_ELO_MIN, gain)
+        gain = max(ON_TIME_ELO_MIN, ON_TIME_ELO_MAX - difference)
+        return True, difference, gain
 
-    over = difference - ON_TIME_WINDOW_MINUTES
-    ratio = min(over / LATE_PENALTY_RAMP_MINUTES, 1.0)
-    penalty = round(LATE_ELO_MIN + (LATE_ELO_MAX - LATE_ELO_MIN) * ratio)
-    return False, difference, -penalty
+    return False, difference, -(difference * LATE_ELO_MULTIPLIER)
 
 
 # --------------------------------------------------------------------------- #

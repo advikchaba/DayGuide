@@ -37,7 +37,7 @@ Open <http://localhost:5173>. Sign up with any email (e.g. `me@dayguide.dev`) an
 
 * API docs: <http://localhost:8000/docs>
 * Health check: <http://localhost:8000/api/health>
-* Smoke test (timing rewards, 30-minute spacing, shop, ladder, reports): `cd backend && python tests/smoke_test.py`
+* Smoke test (timing rewards, first-routine spacing, one-routine day lock, shop, ladder, reports): `cd backend && python tests/smoke_test.py`
 
 > The dev provider creates real password hashes and real JWTs, but it is meant for local use.
 > Set `DEV_AUTH=false` before you ship.
@@ -102,19 +102,30 @@ browser sends its local time and date, and the API compares the two:
 | Difference from schedule | ELO | Coins |
 | --- | --- | --- |
 | 0 minutes | +50 | task coin value |
-| 10 minutes | +48 | task coin value |
-| 20 minutes | +45 | task coin value |
-| 21 minutes | −10 | none |
-| 60 minutes | −18 | none |
-| 120+ minutes | −30 | none |
+| 10 minutes | +40 | task coin value |
+| 20 minutes | +30 | task coin value |
+| 21 minutes | −42 | none |
+| 30 minutes | −60 | none |
+| 60 minutes | −120 | none |
+| 120 minutes | −240 | none |
+
+Inside the 20-minute window each minute early or late subtracts 1 ELO from the +50 base. Outside
+it, the full distance from the scheduled time costs 2 ELO per minute: 30 minutes late is **−60**,
+not −20 or −10. There is no late penalty cap beyond the published ELO floor.
 
 ELO is clamped to the published ladder floor/ceiling (100–2400). Un-ticking a task reverses the
 actual coins and ELO it granted. A **perfect day** requires every task to be checked in on time and
 pays +200 coins (+5 per streak day, capped at +50).
 
-Tasks must be at least **30 minutes apart**, measured on the daily clock (so `23:50` and `00:10`
-collide) and across every routine on the account. The API rejects new routines, added tasks, and
-retimed tasks that break the gap; the builder and quick-add form check it before submitting too.
+Only the account's **first routine** keeps the 30-minute spacing rule. It is measured on the daily
+clock (so `23:50` and `00:10` collide). Additional routines are independent because they may target
+another day: they can overlap the first routine and can use any times, including tasks less than 30
+minutes apart. The API rejects first-routine creations, tasks, and retimed tasks that break the gap;
+the builder and quick-add form check the first routine before submitting too.
+
+A user can check in only **one routine per day**. Once any task in a routine is checked, every task
+in every other routine is locked until that routine has no completed tasks left. The API returns
+`409` for out-of-order tasks and for attempts to start a second routine.
 
 ---
 
@@ -122,8 +133,8 @@ retimed tasks that break the gap; the builder and quick-add form check it before
 
 | Reward | Coins | ELO |
 | --- | --- | --- |
-| On-time task (within 20 min) | task value (10 by default) | **+45 to +50** |
-| Late task (more than 20 min off) | — | **−10 to −30** |
+| On-time task (within 20 min) | task value (10 by default) | **+30 to +50** |
+| Task outside 20 min | — | **−2 per minute off** (30 min = −60) |
 | **Perfect on-time routine** | **+200** (+5/day streak bonus, capped at +50) | — |
 
 | Tier | ELO range |
@@ -135,7 +146,7 @@ retimed tasks that break the gap; the builder and quick-add form check it before
 | Platinum | 1600 – 2000 |
 | Ruby | 2000 – 2400 |
 
-Prices: colour themes **10,000**, meme/image themes **20,000**, custom profile picture uploads
+Prices: colour themes **2,000**, meme/image themes **5,000**, custom profile picture uploads
 **100 per change**, light + dark themes free, first username free, later username changes **400**
 (taken names are refused). Colour themes repaint the full surface palette; image themes add a
 foreground artwork panel and a stronger page backdrop.

@@ -1,8 +1,8 @@
 """The unlockable theme catalogue.
 
 Prices follow the product spec:
-  * colour themes ......... 10,000 coins
-  * image / meme themes ... 20,000 coins
+  * colour themes ......... 2,000 coins
+  * image / meme themes ... 5,000 coins
   * light + dark themes ... free defaults
 
 Profile pictures are uploaded by the user instead of being shop items.
@@ -13,8 +13,8 @@ Profile pictures are uploaded by the user instead of being shop items.
 
 from __future__ import annotations
 
-BASE_PRICE_THEME = 10_000
-BASE_PRICE_IMAGE_THEME = 20_000
+BASE_PRICE_THEME = 2_000
+BASE_PRICE_IMAGE_THEME = 5_000
 
 # Retired themes stay in the database so old purchase rows remain valid, but
 # they are hidden from the shop and cannot be bought or equipped again.

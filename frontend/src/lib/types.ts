@@ -55,6 +55,9 @@ export interface Routine {
   done: number
   percent: number
   perfect_today: boolean
+  locked_today: boolean
+  locked_by_routine_id: number | null
+  locked_by_routine: string | null
 }
 
 export interface Reward {

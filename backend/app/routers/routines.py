@@ -24,6 +24,7 @@ from ..schemas import CompletionIn, RoutineIn, RoutineUpdate, TaskCompleteOut, T
 from ..serializers import serialize_routine
 from ..services.routines import (
     ensure_sequential_completion,
+    ensure_single_routine_started,
     ensure_task_spacing,
     get_owned_routine,
     get_owned_task,
@@ -57,7 +58,7 @@ def list_routines(
     routines = (
         db.query(Routine)
         .filter(Routine.user_id == profile.id)
-        .order_by(Routine.created_at.asc())
+        .order_by(Routine.created_at.asc(), Routine.id.asc())
         .all()
     )
     day = local_date or today()
@@ -137,7 +138,7 @@ def add_task(
     db: Session = Depends(get_db),
 ) -> dict:
     routine = get_owned_routine(db, routine_id, profile.id)
-    ensure_task_spacing(db, profile.id, [payload])
+    ensure_task_spacing(db, profile.id, [payload], routine_id=routine.id)
     position = max((task.position for task in routine.tasks), default=-1) + 1
     db.add(
         Task(
@@ -165,7 +166,13 @@ def update_task(
 ) -> dict:
     task, routine = get_owned_task(db, task_id, profile.id)
     if payload.scheduled_time != task.scheduled_time:
-        ensure_task_spacing(db, profile.id, [payload], exclude_task_id=task.id)
+        ensure_task_spacing(
+            db,
+            profile.id,
+            [payload],
+            routine_id=routine.id,
+            exclude_task_id=task.id,
+        )
     task.title = payload.title.strip()
     task.note = payload.note
     task.requires_proof = False
@@ -213,6 +220,7 @@ def complete_task(
     )
 
     if not existing:
+        ensure_single_routine_started(db, routine, profile.id, day)
         ensure_sequential_completion(db, routine, task, profile.id, day)
 
         actual_time = _local_time(payload)

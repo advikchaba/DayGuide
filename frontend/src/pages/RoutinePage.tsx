@@ -53,8 +53,23 @@ export function RoutinePage() {
     [orderedTasks],
   )
 
+  const routineLocked = active?.locked_today ?? false
+  const lockedByRoutineId = active?.locked_by_routine_id ?? null
+  const firstRoutineId = routines[0]?.id ?? null
+  const activeIsFirstRoutine = active?.id === firstRoutineId
+
   const lockedTasks = useMemo(() => {
     const locked = new Map<number, string>()
+    if (!active) return locked
+
+    if (active.locked_today) {
+      const reason = active.locked_by_routine ?? 'another routine'
+      for (const task of orderedTasks) {
+        if (!task.completed_today) locked.set(task.id, reason)
+      }
+      return locked
+    }
+
     if (!firstIncomplete) return locked
     for (const task of orderedTasks) {
       if (!task.completed_today && compareTaskSchedule(task, firstIncomplete) > 0) {
@@ -62,7 +77,7 @@ export function RoutinePage() {
       }
     }
     return locked
-  }, [orderedTasks, firstIncomplete])
+  }, [active, orderedTasks, firstIncomplete])
 
   const load = useCallback(async () => {
     try {
@@ -81,7 +96,21 @@ export function RoutinePage() {
   }, [load])
 
   const replaceRoutine = (next: Routine) => {
-    setRoutines((current) => current.map((routine) => (routine.id === next.id ? next : routine)))
+    setRoutines((current) => {
+      const updated = current.map((routine) => (routine.id === next.id ? next : routine))
+      const started = updated.find((routine) =>
+        routine.tasks.some((task) => task.completed_today),
+      )
+      return updated.map((routine) => {
+        const locked = Boolean(started && started.id !== routine.id)
+        return {
+          ...routine,
+          locked_today: locked,
+          locked_by_routine_id: locked && started ? started.id : null,
+          locked_by_routine: locked && started ? started.name : null,
+        }
+      })
+    })
     emitTasksChanged()
   }
 
@@ -135,10 +164,9 @@ export function RoutinePage() {
     event.preventDefault()
     if (!active || !newTask.trim()) return
 
-    const conflict = findSpacingConflict(
-      routines.flatMap((routine) => routine.tasks),
-      newTaskTime,
-    )
+    const conflict = activeIsFirstRoutine
+      ? findSpacingConflict(active.tasks, newTaskTime)
+      : null
     if (conflict) {
       push(spacingConflictMessage(newTaskTime, conflict), 'error')
       return
@@ -158,9 +186,7 @@ export function RoutinePage() {
       setNewTask('')
       setNewTaskTime(
         nextFreeSlot(
-          routines
-            .map((routine) => (routine.id === updated.id ? updated : routine))
-            .flatMap((routine) => routine.tasks),
+          routines[0]?.id === updated.id ? updated.tasks : [],
         ),
       )
       push('Task added to today’s checklist.', 'success')
@@ -206,7 +232,7 @@ export function RoutinePage() {
               <p className="mt-1 max-w-md text-sm text-muted">
                 {doneToday
                   ? 'Every task landed on time. Your perfect-day coins are banked.'
-                  : 'Check tasks in near their scheduled time. On time earns coins and up to +50 ELO. More than 20 minutes off costs ELO.'}
+                  : 'Check in exactly on time for the full +50 ELO. Each minute off costs 1 ELO; outside the 20-minute window it costs 2 per minute.'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -274,6 +300,11 @@ export function RoutinePage() {
               <span className="ml-2 text-xs text-muted">
                 {routine.done}/{routine.total}
               </span>
+              {routine.locked_today ? (
+                <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-amber-200/80">
+                  locked
+                </span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -294,7 +325,25 @@ export function RoutinePage() {
             }
           />
 
-          {lockedTasks.size > 0 && firstIncomplete ? (
+          {routineLocked ? (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-amber-400/10 px-3 py-2.5 text-xs font-medium text-amber-100/85">
+              <span>
+                Only one routine can be checked in per day. You already started “
+                {active?.locked_by_routine ?? 'another routine'}”. Finish it before checking tasks
+                here.
+              </span>
+              {lockedByRoutineId ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setActiveId(lockedByRoutineId)}
+                >
+                  Open that routine
+                </Button>
+              ) : null}
+            </div>
+          ) : lockedTasks.size > 0 && firstIncomplete ? (
             <div className="mb-3 rounded-lg bg-amber-400/10 px-3 py-2.5 text-xs font-medium text-amber-100/85">
               Finish “{firstIncomplete.title}” first. Later tasks stay locked until every earlier
               task is checked.
@@ -344,7 +393,9 @@ export function RoutinePage() {
             </Button>
           </form>
           <p className="mt-2 text-xs text-muted">
-            Tasks need at least 30 minutes between scheduled times, across all of your routines.
+            {activeIsFirstRoutine
+              ? 'This is your first routine, so its tasks stay at least 30 minutes apart.'
+              : 'Additional routines can use any times; the 30-minute spacing rule only applies to your first routine.'}
           </p>
         </section>
       ) : (
