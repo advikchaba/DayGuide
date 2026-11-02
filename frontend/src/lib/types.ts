@@ -255,6 +255,8 @@ export interface CommonRoutine {
   tasks: CommonRoutineTask[]
   creator_username: string | null
   friend_username: string | null
+  pending_delete?: boolean
+  delete_requested_by?: string | null
 }
 
 // --------------------------------------------------------------------------- #

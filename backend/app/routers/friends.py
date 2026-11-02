@@ -336,6 +336,48 @@ def read_common_routine(
         raise HTTPException(status_code=403, detail="You are not part of this common routine.")
     return _serialize_common_routine(db, routine, profile.id)
 
+@router.post("/common-routines/{routine_id}/request-delete")
+def request_delete_common_routine(
+    routine_id: int,
+    profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db),
+) -> dict:
+    routine = db.get(CommonRoutine, routine_id)
+    if not routine:
+        raise HTTPException(status_code=404, detail="Common routine not found.")
+    if routine.creator_id != profile.id and routine.friend_id != profile.id:
+        raise HTTPException(status_code=403, detail="You are not part of this common routine.")
+    if routine.pending_delete and routine.delete_requested_by == profile.id:
+        raise HTTPException(status_code=409, detail="You already requested deletion.")
+    if routine.pending_delete and routine.delete_requested_by != profile.id:
+        # Other user already requested - this is an acceptance, delete now
+        db.delete(routine)
+        db.commit()
+        return {"detail": "Common routine deleted."}
+    routine.pending_delete = True
+    routine.delete_requested_by = profile.id
+    db.commit()
+    return {"detail": "Delete request sent. Waiting for the other user to accept."}
+
+
+@router.post("/common-routines/{routine_id}/cancel-delete")
+def cancel_delete_common_routine(
+    routine_id: int,
+    profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db),
+) -> dict:
+    routine = db.get(CommonRoutine, routine_id)
+    if not routine:
+        raise HTTPException(status_code=404, detail="Common routine not found.")
+    if routine.creator_id != profile.id and routine.friend_id != profile.id:
+        raise HTTPException(status_code=403, detail="You are not part of this common routine.")
+    if routine.delete_requested_by != profile.id:
+        raise HTTPException(status_code=403, detail="Only the requester can cancel.")
+    routine.pending_delete = False
+    routine.delete_requested_by = None
+    db.commit()
+    return {"detail": "Delete request cancelled."}
+
 
 # --------------------------------------------------------------------------- #
 # Duels
@@ -618,6 +660,8 @@ def _serialize_common_routine(db: Session, routine: CommonRoutine, viewer_id: st
         ],
         "creator_username": creator.username if creator else None,
         "friend_username": friend.username if friend else None,
+        "pending_delete": routine.pending_delete,
+        "delete_requested_by": routine.delete_requested_by,
     }
 
 

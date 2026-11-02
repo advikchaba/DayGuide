@@ -294,6 +294,8 @@ class CommonRoutine(Base):
     name: Mapped[str] = mapped_column(String(80), nullable=False)
     emoji: Mapped[str] = mapped_column(String(8), default="", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    pending_delete: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    delete_requested_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     creator: Mapped[Profile] = relationship(foreign_keys=[creator_id], back_populates="common_routines_created")
     friend: Mapped[Profile] = relationship(foreign_keys=[friend_id], back_populates="common_routines_joined")

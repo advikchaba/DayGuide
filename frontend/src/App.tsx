@@ -10,7 +10,7 @@ import { SessionLoading } from './components/SessionLoading'
 import { useImmersiveFullscreen } from './lib/fullscreen'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { LandingPage } from './pages/LandingPage'
-import { FriendsPage } from './pages/FriendsPage'
+import { DuelPage } from './pages/DuelPage'
 import { LeaderboardPage } from './pages/LeaderboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { OnboardingPage } from './pages/OnboardingPage'
@@ -116,7 +116,7 @@ export default function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
-<Route path="/friends" element={<FriendsPage />} />
+<Route path="/friends" element={<DuelPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route
             path="/admin"

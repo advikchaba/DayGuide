@@ -5,7 +5,7 @@ import type { Friend, FriendRequest, FriendSearchResult, CommonRoutine, Duel } f
 import { useAuth } from '../state/AuthContext'
 import { useToast } from '../state/ToastContext'
 
-export function FriendsPage() {
+export function DuelPage() {
   const { profile } = useAuth()
   const { push } = useToast()
 
@@ -23,6 +23,7 @@ export function FriendsPage() {
   const [routineName, setRoutineName] = useState('')
   const [routineFriend, setRoutineFriend] = useState('')
   const [routineTasks, setRoutineTasks] = useState<string[]>([''])
+  const [routineTaskTimes, setRoutineTaskTimes] = useState<string[]>(['09:00'])
   const [creatingRoutine, setCreatingRoutine] = useState(false)
 
 
@@ -92,13 +93,32 @@ export function FriendsPage() {
     }
   }
 
+  const handleRequestDeleteRoutine = async (routineId: number) => {
+    try {
+      const result = await api.post<{ detail: string }>(`/friends/common-routines/${routineId}/request-delete`)
+      push(result.detail, 'info')
+      await load()
+    } catch (error) {
+      push(error instanceof ApiError ? error.detail : 'Could not request deletion.', 'error')
+    }
+  }
+
+  const handleCancelDeleteRoutine = async (routineId: number) => {
+    try {
+      const result = await api.post<{ detail: string }>(`/friends/common-routines/${routineId}/cancel-delete`)
+      push(result.detail, 'info')
+      await load()
+    } catch (error) {
+      push(error instanceof ApiError ? error.detail : 'Could not cancel deletion.', 'error')
+    }
+  }
   const handleCreateRoutine = async () => {
     if (!routineName.trim() || !routineFriend.trim()) return
     setCreatingRoutine(true)
     try {
-      const tasks = routineTasks.filter((t) => t.trim()).map((title) => ({
+      const tasks = routineTasks.filter((t) => t.trim()).map((title, i) => ({
         title: title.trim(),
-        scheduled_time: '09:00',
+        scheduled_time: routineTaskTimes[i] || '09:00',
       }))
       await api.post('/friends/common-routines', {
         friend_username: routineFriend.trim(),
@@ -111,6 +131,7 @@ export function FriendsPage() {
       setRoutineName('')
       setRoutineFriend('')
       setRoutineTasks([''])
+      setRoutineTaskTimes(['09:00'])
       await load()
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not create routine.', 'error')
@@ -159,7 +180,7 @@ export function FriendsPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        title="Friends"
+        title="Duel"
         subtitle="Search users, send friend requests, create common routines, and duel with friends."
       />
 
@@ -274,16 +295,36 @@ export function FriendsPage() {
                     <p className="text-xs text-muted">
                       with @{routine.creator_username === profile?.username ? routine.friend_username : routine.creator_username}
                     </p>
+                    {routine.pending_delete ? (
+                      <p className="text-xs text-amber-300 mt-1">
+                        Deletion requested by {routine.delete_requested_by === profile?.id ? 'you' : 'the other user'}. {routine.delete_requested_by !== profile?.id ? 'Accept to delete.' : 'Waiting for acceptance.'}
+                      </p>
+                    ) : null}
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const opponentId = routine.creator_id === profile?.id ? routine.friend_id : routine.creator_id
-                      void handleStartDuel(routine.id, opponentId)
-                    }}
-                  >
-                    Duel
-                  </Button>
+                  <div className="flex gap-2">
+                    {routine.pending_delete && routine.delete_requested_by !== profile?.id ? (
+                      <Button size="sm" variant="danger" onClick={() => handleRequestDeleteRoutine(routine.id)}>
+                        Accept delete
+                      </Button>
+                    ) : routine.pending_delete && routine.delete_requested_by === profile?.id ? (
+                      <Button size="sm" variant="ghost" onClick={() => handleCancelDeleteRoutine(routine.id)}>
+                        Cancel delete
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="danger" onClick={() => handleRequestDeleteRoutine(routine.id)}>
+                        Delete
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const opponentId = routine.creator_id === profile?.id ? routine.friend_id : routine.creator_id
+                        void handleStartDuel(routine.id, opponentId)
+                      }}
+                    >
+                      Duel
+                    </Button>
+                  </div>
                 </div>
                 <ul className="text-xs text-muted space-y-1">
                   {routine.tasks.map((task) => (
@@ -380,22 +421,36 @@ export function FriendsPage() {
           <div className="space-y-2">
             <p className="text-xs font-bold uppercase tracking-wider text-muted">Tasks</p>
             {routineTasks.map((task, index) => (
-              <input
-                key={index}
-                value={task}
-                onChange={(e) => {
-                  const next = [...routineTasks]
-                  next[index] = e.target.value
-                  setRoutineTasks(next)
-                }}
-                placeholder={`Task ${index + 1}`}
-                className="focus-ring w-full rounded-lg bg-surface-2 px-4 py-2.5 text-sm"
-              />
+              <div key={index} className="flex gap-2">
+                <input
+                  value={task}
+                  onChange={(e) => {
+                    const next = [...routineTasks]
+                    next[index] = e.target.value
+                    setRoutineTasks(next)
+                  }}
+                  placeholder={`Task ${index + 1}`}
+                  className="focus-ring flex-1 rounded-lg bg-surface-2 px-4 py-2.5 text-sm"
+                />
+                <input
+                  type="time"
+                  value={routineTaskTimes[index] || '09:00'}
+                  onChange={(e) => {
+                    const next = [...routineTaskTimes]
+                    next[index] = e.target.value
+                    setRoutineTaskTimes(next)
+                  }}
+                  className="focus-ring rounded-lg bg-surface-2 px-3 py-2.5 text-sm"
+                />
+              </div>
             ))}
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setRoutineTasks([...routineTasks, ''])}
+              onClick={() => {
+                setRoutineTasks([...routineTasks, ''])
+                setRoutineTaskTimes([...routineTaskTimes, '09:00'])
+              }}
             >
               + Add task
             </Button>
