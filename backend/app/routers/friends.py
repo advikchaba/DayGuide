@@ -86,7 +86,8 @@ def _pending_request_between(db: Session, user_id: str, friend_id: str) -> Frien
 
 
 def _serialize_friend(db: Session, row: FriendModel, viewer_id: str) -> dict:
-    profile = db.get(Profile, row.friend_id)
+    other_id = row.friend_id if row.user_id == viewer_id else row.user_id
+    profile = db.get(Profile, other_id)
     return {
         "id": row.id,
         "user_id": row.user_id,
@@ -176,6 +177,9 @@ def accept_friend_request(
         raise HTTPException(status_code=409, detail="This request has already been resolved.")
 
     request.status = "accepted"
+    # Create reciprocal friend row for the accepter so both sides see each other.
+    reciprocal = FriendModel(user_id=profile.id, friend_id=request.user_id, status="accepted")
+    db.add(reciprocal)
     db.commit()
     return {"id": request.id, "status": request.status}
 
@@ -229,7 +233,10 @@ def list_friends(
 ) -> list[dict]:
     rows = (
         db.query(FriendModel)
-        .filter(FriendModel.user_id == profile.id, FriendModel.status == "accepted")
+        .filter(
+            ((FriendModel.user_id == profile.id) | (FriendModel.friend_id == profile.id)),
+            FriendModel.status == "accepted",
+        )
         .order_by(FriendModel.created_at.desc())
         .all()
     )
@@ -242,18 +249,19 @@ def remove_friend(
     profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db),
 ) -> dict:
-    row = (
+    rows = (
         db.query(FriendModel)
         .filter(
-            FriendModel.user_id == profile.id,
-            FriendModel.friend_id == friend_id,
+            ((FriendModel.user_id == profile.id) & (FriendModel.friend_id == friend_id))
+            | ((FriendModel.user_id == friend_id) & (FriendModel.friend_id == profile.id)),
             FriendModel.status == "accepted",
         )
-        .one_or_none()
+        .all()
     )
-    if not row:
+    if not rows:
         raise HTTPException(status_code=404, detail="Friend not found.")
-    db.delete(row)
+    for row in rows:
+        db.delete(row)
     db.commit()
     return {"detail": "Friend removed."}
 
