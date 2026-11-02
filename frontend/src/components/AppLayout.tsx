@@ -73,7 +73,14 @@ export function AppLayout() {
                   <Link to="/profile" className="focus-ring rounded-lg" title={profile.username ? `@${profile.username}` : 'Profile'}>
                     <Avatar slug={profile.avatar_slug} size={38} src={profile.avatar_url} />
                   </Link>
-                  <Button variant="ghost" size="sm" onClick={handleSignOut} loading={busy} className="hidden md:inline-flex">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSignOut}
+                    loading={busy}
+                    className="shrink-0"
+                    aria-label="Sign out"
+                  >
                     Sign out
                   </Button>
                 </>

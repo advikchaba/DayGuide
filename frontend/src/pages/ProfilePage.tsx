@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Card, CoinPill, Field, Modal, SectionTitle, Stat } from '../components/ui'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { ReminderSyncCard } from '../components/ReminderSyncCard'
@@ -12,9 +12,11 @@ import { useTheme } from '../state/ThemeContext'
 import { useToast } from '../state/ToastContext'
 
 export function ProfilePage() {
-  const { profile, applyProfile } = useAuth()
+  const { profile, applyProfile, signOut } = useAuth()
   const { setTheme } = useTheme()
   const { push } = useToast()
+  const navigate = useNavigate()
+  const [signingOut, setSigningOut] = useState(false)
 
   const [ledger, setLedger] = useState<LedgerEntry[]>([])
   const [routines, setRoutines] = useState<Routine[]>([])
@@ -177,6 +179,22 @@ export function ProfilePage() {
                 Back to Midnight
               </Button>
             ) : null}
+            <Button
+              variant="ghost"
+              loading={signingOut}
+              onClick={async () => {
+                setSigningOut(true)
+                try {
+                  await signOut()
+                  setTheme('dark')
+                  navigate('/')
+                } finally {
+                  setSigningOut(false)
+                }
+              }}
+            >
+              Sign out
+            </Button>
           </div>
 
           <p className="text-xs text-muted">

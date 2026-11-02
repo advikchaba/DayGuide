@@ -1019,6 +1019,49 @@ def main() -> None:
             == 404,
         )
 
+        delete_routine_fixture = client.post(
+            "/api/routines",
+            headers=removal_headers,
+            json={
+                "name": "Routine to delete",
+                "tasks": [{"title": "Nested task", "scheduled_time": "22:00"}],
+            },
+        )
+        check(
+            "routine deletion fixture created",
+            delete_routine_fixture.status_code == 201,
+            delete_routine_fixture.text,
+        )
+        delete_routine_id = delete_routine_fixture.json()["id"]
+
+        deleted_routine = client.delete(
+            f"/api/routines/{delete_routine_id}", headers=removal_headers
+        )
+        check(
+            "a routine and its tasks can be deleted",
+            deleted_routine.status_code == 204,
+            deleted_routine.text,
+        )
+
+        after_routine_delete = client.get(
+            "/api/routines", params={"local_date": TODAY}, headers=removal_headers
+        )
+        check(
+            "a deleted routine disappears from the account",
+            all(
+                routine["id"] != delete_routine_id
+                for routine in after_routine_delete.json()
+            ),
+            after_routine_delete.json(),
+        )
+        check(
+            "deleting an already-removed routine returns 404",
+            client.delete(
+                f"/api/routines/{delete_routine_id}", headers=removal_headers
+            ).status_code
+            == 404,
+        )
+
         print(f"\nAll {len(PASSED)} checks passed.")
 
 

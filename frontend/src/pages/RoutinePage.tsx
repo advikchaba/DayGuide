@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { TaskRow } from '../components/TaskRow'
 import { RewardBurst } from '../components/RewardBurst'
 import { ReminderSyncCard } from '../components/ReminderSyncCard'
-import { Avatar, Badge, Button, Card, CoinPill, EmptyState, ProgressBar, SectionTitle, Spinner } from '../components/ui'
+import { Avatar, Badge, Button, Card, CoinPill, EmptyState, Modal, ProgressBar, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import {
   compareTaskSchedule,
@@ -37,6 +37,8 @@ export function RoutinePage() {
   const [newTask, setNewTask] = useState('')
   const [newTaskTime, setNewTaskTime] = useState(nextSlot())
   const [adding, setAdding] = useState(false)
+  const [routineToDelete, setRoutineToDelete] = useState<Routine | null>(null)
+  const [deletingRoutine, setDeletingRoutine] = useState(false)
 
   const active = useMemo(
     () => routines.find((routine) => routine.id === activeId) ?? routines[0] ?? null,
@@ -83,7 +85,11 @@ export function RoutinePage() {
     try {
       const data = await api.get<Routine[]>(`/routines?local_date=${localDateString()}`)
       setRoutines(data)
-      setActiveId((current) => current ?? data[0]?.id ?? null)
+      setActiveId((current) =>
+        current !== null && data.some((routine) => routine.id === current)
+          ? current
+          : data[0]?.id ?? null,
+      )
     } catch (error) {
       push(error instanceof ApiError ? error.detail : 'Could not load your routines.', 'error')
     } finally {
@@ -208,6 +214,24 @@ export function RoutinePage() {
     }
   }
 
+  const handleDeleteRoutine = async () => {
+    if (!routineToDelete) return
+    const deletedName = routineToDelete.name
+    setDeletingRoutine(true)
+    try {
+      await api.del(`/routines/${routineToDelete.id}`)
+      setRoutineToDelete(null)
+      setActiveId(null)
+      await load()
+      emitTasksChanged()
+      push(`Routine “${deletedName}” deleted.`, 'success')
+    } catch (error) {
+      push(error instanceof ApiError ? error.detail : 'Could not delete that routine.', 'error')
+    } finally {
+      setDeletingRoutine(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center gap-3 text-muted">
@@ -287,25 +311,38 @@ export function RoutinePage() {
       {routines.length > 1 ? (
         <div className="flex flex-wrap gap-2">
           {routines.map((routine) => (
-            <button
-              key={routine.id}
-              type="button"
-              onClick={() => setActiveId(routine.id)}
-              className={[
-                'focus-ring rounded-lg px-3 py-2 text-sm font-bold transition',
-                routine.id === active?.id ? 'bg-surface-2 text-ink' : 'bg-surface text-muted hover:text-ink',
-              ].join(' ')}
-            >
-              {routine.name}
-              <span className="ml-2 text-xs text-muted">
-                {routine.done}/{routine.total}
-              </span>
-              {routine.locked_today ? (
-                <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-amber-200/80">
-                  locked
+            <div key={routine.id} className="group relative">
+              <button
+                type="button"
+                onClick={() => setActiveId(routine.id)}
+                className={[
+                  'focus-ring rounded-lg px-3 py-2 text-sm font-bold transition',
+                  routine.id === active?.id ? 'bg-surface-2 text-ink' : 'bg-surface text-muted hover:text-ink',
+                ].join(' ')}
+              >
+                {routine.name}
+                <span className="ml-2 text-xs text-muted">
+                  {routine.done}/{routine.total}
                 </span>
-              ) : null}
-            </button>
+                {routine.locked_today ? (
+                  <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-amber-200/80">
+                    locked
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setRoutineToDelete(routine)
+                }}
+                className="focus-ring absolute -right-1 -top-1 hidden rounded-full bg-surface-solid px-1.5 py-0.5 text-[9px] font-bold text-muted transition hover:text-rose-300 group-hover:block"
+                title="Delete routine"
+                aria-label="Delete routine"
+              >
+                ×
+              </button>
+            </div>
           ))}
         </div>
       ) : null}
@@ -317,11 +354,21 @@ export function RoutinePage() {
             title={active.name}
             subtitle="Tap a task when you do it. Tasks unlock in scheduled order, so finish the first open one before checking the next."
             action={
-              active.perfect_today ? (
-                <Badge tone="success">Perfect today</Badge>
-              ) : (
-                <Badge tone="neutral">{active.total - active.done} left</Badge>
-              )
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {active.perfect_today ? (
+                  <Badge tone="success">Perfect today</Badge>
+                ) : (
+                  <Badge tone="neutral">{active.total - active.done} left</Badge>
+                )}
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setRoutineToDelete(active)}
+                >
+                  Delete routine
+                </Button>
+              </div>
             }
           />
 
@@ -409,6 +456,37 @@ export function RoutinePage() {
           }
         />
       )}
+
+      <Modal
+        open={routineToDelete !== null}
+        onClose={() => setRoutineToDelete(null)}
+        title="Delete this routine?"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setRoutineToDelete(null)}
+              disabled={deletingRoutine}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              loading={deletingRoutine}
+              onClick={handleDeleteRoutine}
+            >
+              Delete routine
+            </Button>
+          </>
+        }
+      >
+        <p>
+          This permanently removes <strong>{routineToDelete?.name}</strong> and all of its tasks.
+          Completion history for this routine will no longer appear in reports.
+        </p>
+      </Modal>
 
       <RewardBurst reward={reward} open={rewardOpen} onClose={() => setRewardOpen(false)} />
     </div>
