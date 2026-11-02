@@ -303,6 +303,138 @@ class LedgerOut(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Friends
+# --------------------------------------------------------------------------- #
+class FriendSearchOut(BaseModel):
+    id: str
+    username: str | None
+    avatar_slug: str
+    avatar_url: str | None = None
+    elo: int
+
+
+class FriendRequestOut(BaseModel):
+    id: int
+    user_id: str
+    friend_id: str
+    status: str
+    created_at: datetime
+
+
+class FriendOut(BaseModel):
+    id: int
+    user_id: str
+    friend_id: str
+    status: str
+    created_at: datetime
+    username: str | None = None
+    avatar_slug: str | None = None
+    avatar_url: str | None = None
+    elo: int | None = None
+
+
+class SendFriendRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=20)
+
+
+class FriendAction(BaseModel):
+    request_id: int
+
+
+# --------------------------------------------------------------------------- #
+# Common Routines
+# --------------------------------------------------------------------------- #
+class CommonRoutineTaskIn(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    note: str | None = Field(default=None, max_length=400)
+    scheduled_time: str = Field(default="09:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+class CommonRoutineTaskOut(BaseModel):
+    id: int
+    title: str
+    note: str | None
+    scheduled_time: str
+    position: int
+
+
+class CommonRoutineIn(BaseModel):
+    friend_username: str = Field(min_length=3, max_length=20)
+    name: str = Field(min_length=1, max_length=80)
+    emoji: str = Field(default="", max_length=8)
+    tasks: list[CommonRoutineTaskIn] = Field(default_factory=list, max_length=40)
+
+
+class CommonRoutineOut(BaseModel):
+    id: int
+    creator_id: str
+    friend_id: str
+    name: str
+    emoji: str
+    created_at: datetime
+    tasks: list[CommonRoutineTaskOut]
+    creator_username: str | None = None
+    friend_username: str | None = None
+
+
+class DuelCreate(BaseModel):
+    common_routine_id: int
+    opponent_id: str
+
+
+class DuelTaskOut(BaseModel):
+    id: int
+    title: str
+    scheduled_time: str
+    position: int
+    completed_by_me: bool = False
+    completed_by_opponent: bool = False
+
+
+class DuelPlayerOut(BaseModel):
+    user_id: str
+    username: str | None
+    avatar_slug: str
+    avatar_url: str | None = None
+    elo_before: int
+    elo_after: int | None = None
+    elo_delta: int
+    coins_won: int
+    joined_at: datetime
+    finished_at: datetime | None = None
+    is_you: bool = False
+
+
+class DuelOut(BaseModel):
+    id: int
+    common_routine_id: int
+    common_routine_name: str
+    challenger_id: str
+    opponent_id: str
+    status: str
+    winner_id: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    tasks: list[DuelTaskOut]
+    players: list[DuelPlayerOut]
+    you_won: bool = False
+
+
+class DuelTaskComplete(BaseModel):
+    duel_task_id: int
+    local_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    local_date: date | None = None
+
+
+# --------------------------------------------------------------------------- #
+# Late task pass
+# --------------------------------------------------------------------------- #
+class LatePassRequest(BaseModel):
+    task_id: int
+
+
+# --------------------------------------------------------------------------- #
 # Administration
 # --------------------------------------------------------------------------- #
 MAX_ADMIN_AMOUNT = 1_000_000_000

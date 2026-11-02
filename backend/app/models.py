@@ -67,6 +67,26 @@ class Profile(Base):
 
     routines: Mapped[list["Routine"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
     purchases: Mapped[list["Purchase"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
+    friends: Mapped[list["Friend"]] = relationship(
+        foreign_keys="[Friend.user_id]",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    friends_of_me: Mapped[list["Friend"]] = relationship(
+        foreign_keys="[Friend.friend_id]",
+        back_populates="friend",
+        cascade="all, delete-orphan",
+    )
+    common_routines_created: Mapped[list["CommonRoutine"]] = relationship(
+        foreign_keys="[CommonRoutine.creator_id]",
+        back_populates="creator",
+        cascade="all, delete-orphan",
+    )
+    common_routines_joined: Mapped[list["CommonRoutine"]] = relationship(
+        foreign_keys="[CommonRoutine.friend_id]",
+        back_populates="friend",
+        cascade="all, delete-orphan",
+    )
 
 
 class Routine(Base):
@@ -244,6 +264,160 @@ class MatchPlayer(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     match: Mapped[Match] = relationship(back_populates="players")
+
+
+class Friend(Base):
+    """Friendship between two users."""
+
+    __tablename__ = "friends"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    friend_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)  # pending|accepted|declined|blocked
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    user: Mapped[Profile] = relationship(foreign_keys=[user_id], back_populates="friends")
+    friend: Mapped[Profile] = relationship(foreign_keys=[friend_id], back_populates="friends")
+
+    __table_args__ = (UniqueConstraint("user_id", "friend_id", name="uq_friend_pair"),)
+
+
+class CommonRoutine(Base):
+    """A routine shared between two friends for duels."""
+
+    __tablename__ = "common_routines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    creator_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    friend_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    emoji: Mapped[str] = mapped_column(String(8), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    creator: Mapped[Profile] = relationship(foreign_keys=[creator_id], back_populates="common_routines_created")
+    friend: Mapped[Profile] = relationship(foreign_keys=[friend_id], back_populates="common_routines_joined")
+    tasks: Mapped[list["CommonRoutineTask"]] = relationship(
+        back_populates="common_routine",
+        cascade="all, delete-orphan",
+        order_by="CommonRoutineTask.position",
+    )
+    duels: Mapped[list["Duel"]] = relationship(back_populates="common_routine", cascade="all, delete-orphan")
+
+
+class CommonRoutineTask(Base):
+    """Tasks within a shared/common routine."""
+
+    __tablename__ = "common_routine_tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    common_routine_id: Mapped[int] = mapped_column(ForeignKey("common_routines.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scheduled_time: Mapped[str] = mapped_column(String(5), default="09:00", nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    common_routine: Mapped[CommonRoutine] = relationship(back_populates="tasks")
+
+
+class Duel(Base):
+    """A head-to-head duel between two friends using a shared routine."""
+
+    __tablename__ = "duels"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    common_routine_id: Mapped[int] = mapped_column(ForeignKey("common_routines.id", ondelete="CASCADE"), index=True)
+    challenger_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    opponent_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="waiting", nullable=False)  # waiting|active|finished
+    winner_id: Mapped[str | None] = mapped_column(ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    common_routine: Mapped[CommonRoutine] = relationship(back_populates="duels")
+    tasks: Mapped[list["DuelTask"]] = relationship(
+        back_populates="duel",
+        cascade="all, delete-orphan",
+        order_by="DuelTask.position",
+    )
+    players: Mapped[list["DuelPlayer"]] = relationship(
+        back_populates="duel",
+        cascade="all, delete-orphan",
+        order_by="DuelPlayer.joined_at",
+    )
+
+
+class DuelTask(Base):
+    """Tasks within a duel (copied from common routine)."""
+
+    __tablename__ = "duel_tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    duel_id: Mapped[int] = mapped_column(ForeignKey("duels.id", ondelete="CASCADE"), index=True)
+    common_routine_task_id: Mapped[int | None] = mapped_column(ForeignKey("common_routine_tasks.id", ondelete="SET NULL"), nullable=True)
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    scheduled_time: Mapped[str] = mapped_column(String(5), default="09:00", nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    duel: Mapped[Duel] = relationship(back_populates="tasks")
+    completions: Mapped[list["DuelTaskCompletion"]] = relationship(
+        back_populates="duel_task",
+        cascade="all, delete-orphan",
+    )
+
+
+class DuelPlayer(Base):
+    """A participant in a duel."""
+
+    __tablename__ = "duel_players"
+
+    __table_args__ = (UniqueConstraint("duel_id", "user_id", name="uq_duel_player"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    duel_id: Mapped[int] = mapped_column(ForeignKey("duels.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    elo_before: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+    elo_after: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    elo_delta: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    coins_won: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    duel: Mapped[Duel] = relationship(back_populates="players")
+
+
+class DuelTaskCompletion(Base):
+    """A task completion within a duel."""
+
+    __tablename__ = "duel_task_completions"
+
+    __table_args__ = (UniqueConstraint("duel_task_id", "user_id", name="uq_duel_task_user"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    duel_task_id: Mapped[int] = mapped_column(ForeignKey("duel_tasks.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    local_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    on_time: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    time_delta_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    elo_delta: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    duel_task: Mapped[DuelTask] = relationship(back_populates="completions")
+
+
+class LateTaskPass(Base):
+    """Record of a user paying 1000 coins to avoid an ELO deduction for a late task."""
+
+    __tablename__ = "late_task_passes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
+    paid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    coins_paid: Mapped[int] = mapped_column(Integer, default=1000, nullable=False)
+
+    __table_args__ = (UniqueConstraint("user_id", "task_id", name="uq_late_task_pass"),)
 
 
 class DeletedAccount(Base):
