@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_profile
 from ..database import get_db
 from ..economy import apply_rewards, timing_reward, today
+from ..services.storage import public_url
 from ..models import (
     CommonRoutine,
     CommonRoutineTask,
@@ -94,7 +95,7 @@ def _serialize_friend(db: Session, row: FriendModel, viewer_id: str) -> dict:
         "created_at": row.created_at,
         "username": profile.username if profile else None,
         "avatar_slug": profile.avatar_slug if profile else None,
-        "avatar_url": profile.avatar_url if profile else None,
+        "avatar_url": public_url(profile.avatar_path) if profile and profile.avatar_path else None,
         "elo": profile.elo if profile else None,
     }
 
@@ -120,7 +121,7 @@ def search_users(
             "id": row.id,
             "username": row.username,
             "avatar_slug": row.avatar_slug,
-            "avatar_url": row.avatar_url,
+            "avatar_url": public_url(row.avatar_path) if row.avatar_path else None,
             "elo": row.elo,
         }
         for row in rows
@@ -512,157 +513,6 @@ def start_duel(
 
 
 # --------------------------------------------------------------------------- #
-# Auto-check missed tasks
-# --------------------------------------------------------------------------- #
-@router.post("/tasks/auto-check")
-def auto_check_missed_tasks(
-    profile: Profile = Depends(get_current_profile),
-    db: Session = Depends(get_db),
-) -> dict:
-    """Mark missed tasks as completed and deduct ELO.
-
-    Tasks scheduled more than 20 minutes ago that have no completion are
-    auto-checked with -40 ELO. Tasks that are 4-5 minutes past the window
-    (24-25 minutes late) give the user an option to pay 1000 coins to avoid
-    the deduction instead.
-    """
-    day = today()
-    routines = (
-        db.query(Task)
-        .join(Routine, Routine.id == Task.routine_id)
-        .filter(Routine.user_id == profile.id)
-        .all()
-    )
-    processed = []
-
-    for task in routines:
-        scheduled = task.scheduled_time or "09:00"
-        scheduled_minutes = _minutes(scheduled)
-        if scheduled_minutes is None:
-            continue
-
-        now_minutes = datetime.now(timezone.utc).hour * 60 + datetime.now(timezone.utc).minute
-        diff_minutes = now_minutes - scheduled_minutes
-        if diff_minutes < 20:
-            continue
-
-        existing = (
-            db.query(TaskCompletion)
-            .filter(
-                TaskCompletion.task_id == task.id,
-                TaskCompletion.user_id == profile.id,
-                TaskCompletion.done_on == day,
-            )
-            .one_or_none()
-        )
-        if existing:
-            continue
-
-        late_pass = (
-            db.query(LateTaskPass)
-            .filter(LateTaskPass.user_id == profile.id, LateTaskPass.task_id == task.id)
-            .one_or_none()
-        )
-        if late_pass:
-            continue
-
-        # 4-5 minutes past window: offer pay option instead of auto penalty
-        if 24 <= diff_minutes <= 25:
-            processed.append(
-                {
-                    "task_id": task.id,
-                    "title": task.title,
-                    "scheduled_time": scheduled,
-                    "minutes_late": diff_minutes,
-                    "action": "pay_option",
-                    "cost": LATE_PASS_COST,
-                    "detail": "You are 4-5 minutes past the window. Pay 1000 coins to avoid -40 ELO.",
-                }
-            )
-            continue
-
-        # Auto-check with -40 ELO
-        profile.tasks_completed = (profile.tasks_completed or 0) + 1
-        apply_rewards(db, profile, coins=0, elo=-40, reason=f"Missed task: {task.title}")
-
-        db.add(
-            TaskCompletion(
-                task_id=task.id,
-                user_id=profile.id,
-                done_on=day,
-                source="auto",
-                coins_awarded=0,
-                elo_awarded=-40,
-                on_time=False,
-                time_delta_minutes=diff_minutes,
-            )
-        )
-        processed.append(
-            {
-                "task_id": task.id,
-                "title": task.title,
-                "scheduled_time": scheduled,
-                "minutes_late": diff_minutes,
-                "action": "auto_checked",
-                "elo_delta": -40,
-                "detail": "Task auto-checked: -40 ELO for missing the 20 minute window.",
-            }
-        )
-
-    db.commit()
-    db.refresh(profile)
-    return {"processed": processed}
-
-
-@router.post("/tasks/late-pass")
-def purchase_late_pass(
-    payload: LatePassRequest,
-    profile: Profile = Depends(get_current_profile),
-    db: Session = Depends(get_db),
-) -> dict:
-    """Pay 1000 coins to avoid -40 ELO for a late task (4-5 min past window)."""
-    task = db.get(Task, payload.task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found.")
-    routine = db.get(Routine, task.routine_id)
-    if not routine or routine.user_id != profile.id:
-        raise HTTPException(status_code=404, detail="Task not found.")
-
-    scheduled = task.scheduled_time or "09:00"
-    scheduled_minutes = _minutes(scheduled)
-    now_minutes = datetime.now(timezone.utc).hour * 60 + datetime.now(timezone.utc).minute
-    diff_minutes = now_minutes - scheduled_minutes
-
-    if not (24 <= diff_minutes <= 25):
-        raise HTTPException(status_code=400, detail="Late pass is only available 4-5 minutes past the window.")
-
-    existing = (
-        db.query(LateTaskPass)
-        .filter(LateTaskPass.user_id == profile.id, LateTaskPass.task_id == task.id)
-        .one_or_none()
-    )
-    if existing:
-        raise HTTPException(status_code=409, detail="Late pass already purchased for this task.")
-
-    if profile.coins < LATE_PASS_COST:
-        raise HTTPException(status_code=400, detail=f"You need {LATE_PASS_COST} coins to buy a late pass.")
-
-    from ..database import select_for_update
-
-    locked = select_for_update(db.query(Profile).filter(Profile.id == profile.id), db).one()
-    if locked.coins < LATE_PASS_COST:
-        raise HTTPException(status_code=400, detail="Insufficient coins.")
-
-    apply_rewards(db, locked, coins=-LATE_PASS_COST, reason="Late task pass")
-    db.add(
-        LateTaskPass(user_id=locked.id, task_id=task.id, paid_at=datetime.now(timezone.utc), coins_paid=LATE_PASS_COST)
-    )
-    db.commit()
-
-    return {"detail": "Late pass purchased. ELO deduction avoided.", "coins_paid": LATE_PASS_COST}
-
-
-# --------------------------------------------------------------------------- #
 # Internal helpers
 # --------------------------------------------------------------------------- #
 def _minutes(hhmm: str) -> int | None:
@@ -787,7 +637,7 @@ def _serialize_duel(db: Session, duel: Duel, viewer_id: str) -> dict:
                 "user_id": player.user_id,
                 "username": profile.username if profile else None,
                 "avatar_slug": profile.avatar_slug if profile else None,
-                "avatar_url": profile.avatar_url if profile else None,
+"avatar_url": public_url(profile.avatar_path) if profile and profile.avatar_path else None,
                 "elo_before": player.elo_before,
                 "elo_after": player.elo_after,
                 "elo_delta": player.elo_delta,

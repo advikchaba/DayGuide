@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Avatar, Button, Card, EmptyState, Field, Modal, SectionTitle, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
-import type { Friend, FriendRequest, FriendSearchResult, CommonRoutine, Duel, LatePassOption, AutoCheckedTask } from '../lib/types'
+import type { Friend, FriendRequest, FriendSearchResult, CommonRoutine, Duel } from '../lib/types'
 import { useAuth } from '../state/AuthContext'
 import { useToast } from '../state/ToastContext'
 
 export function FriendsPage() {
-  const { profile, refresh } = useAuth()
+  const { profile } = useAuth()
   const { push } = useToast()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -25,8 +25,6 @@ export function FriendsPage() {
   const [routineTasks, setRoutineTasks] = useState<string[]>([''])
   const [creatingRoutine, setCreatingRoutine] = useState(false)
 
-  const [autoCheckResults, setAutoCheckResults] = useState<(LatePassOption | AutoCheckedTask)[]>([])
-  const [checkingMissed, setCheckingMissed] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -148,34 +146,7 @@ export function FriendsPage() {
     }
   }
 
-  const handleAutoCheck = async () => {
-    setCheckingMissed(true)
-    try {
-      const result = await api.post<{ processed: (LatePassOption | AutoCheckedTask)[] }>('/friends/tasks/auto-check')
-      setAutoCheckResults(result.processed)
-      if (result.processed.length === 0) {
-        push('No missed tasks to process.', 'info')
-      } else {
-        push(`Processed ${result.processed.length} missed task(s).`, 'success')
-      }
-      await refresh()
-    } catch (error) {
-      push(error instanceof ApiError ? error.detail : 'Auto-check failed.', 'error')
-    } finally {
-      setCheckingMissed(false)
-    }
-  }
 
-  const handleLatePass = async (taskId: number) => {
-    try {
-      await api.post('/friends/tasks/late-pass', { task_id: taskId })
-      push('Late pass purchased. ELO deduction avoided.', 'success')
-      setAutoCheckResults((prev) => prev.filter((r) => r.task_id !== taskId))
-      await refresh()
-    } catch (error) {
-      push(error instanceof ApiError ? error.detail : 'Could not purchase late pass.', 'error')
-    }
-  }
 
   if (loading) {
     return (
@@ -191,35 +162,6 @@ export function FriendsPage() {
         title="Friends"
         subtitle="Search users, send friend requests, create common routines, and duel with friends."
       />
-
-      {/* Auto-check missed tasks */}
-      <Card className="space-y-3">
-        <h3 className="font-bold">Missed tasks check</h3>
-        <p className="text-sm text-muted">
-          Tasks missed by more than 20 minutes are auto-checked with -40 ELO. Tasks 4-5 minutes past the window let you pay 1000 coins to avoid the deduction.
-        </p>
-        <Button size="sm" onClick={handleAutoCheck} loading={checkingMissed}>
-          Check missed tasks
-        </Button>
-        {autoCheckResults.length > 0 ? (
-          <ul className="space-y-2">
-            {autoCheckResults.map((r) => (
-              <li key={r.task_id} className="glass-2 flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
-                <span>
-                  {r.title} — {r.minutes_late} min late
-                </span>
-                {r.action === 'pay_option' ? (
-                  <Button size="sm" variant="coin" onClick={() => handleLatePass(r.task_id)}>
-                    Pay 1000 coins to avoid -40 ELO
-                  </Button>
-                ) : (
-                  <span className="text-rose-300 font-bold">-40 ELO</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </Card>
 
       {/* Search */}
       <Card className="space-y-3">
