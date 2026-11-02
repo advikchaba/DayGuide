@@ -424,7 +424,7 @@ def complete_duel_task(
     if not duel:
         raise HTTPException(status_code=404, detail="Duel not found.")
     if duel.challenger_id != profile.id and duel.opponent_id != profile.id:
-        raise HTTPException(status_code=403, detail("You are not part of this duel."))
+        raise HTTPException(status_code=403, detail="You are not part of this duel.")
     if duel.status != "active":
         raise HTTPException(status_code=409, detail="The duel is not active yet.")
 
@@ -496,7 +496,7 @@ def start_duel(
     if not duel:
         raise HTTPException(status_code=404, detail="Duel not found.")
     if duel.challenger_id != profile.id and duel.opponent_id != profile.id:
-        raise HTTPException(status_code=403, detail("You are not part of this duel."))
+        raise HTTPException(status_code=403, detail="You are not part of this duel.")
     if duel.status != "waiting":
         raise HTTPException(status_code=409, detail="The duel is not in waiting state.")
 

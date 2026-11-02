@@ -203,6 +203,122 @@ export interface LedgerEntry {
   created_at: string
 }
 
+// --------------------------------------------------------------------------- #
+// Friends
+// --------------------------------------------------------------------------- #
+export interface FriendSearchResult {
+  id: string
+  username: string | null
+  avatar_slug: string
+  avatar_url: string | null
+  elo: number
+}
+
+export interface FriendRequest {
+  id: number
+  user_id: string
+  friend_id: string
+  status: string
+  created_at: string
+}
+
+export interface Friend {
+  id: number
+  user_id: string
+  friend_id: string
+  status: string
+  created_at: string
+  username: string | null
+  avatar_slug: string | null
+  avatar_url: string | null
+  elo: number | null
+}
+
+// --------------------------------------------------------------------------- #
+// Common Routines
+// --------------------------------------------------------------------------- #
+export interface CommonRoutineTask {
+  id: number
+  title: string
+  note: string | null
+  scheduled_time: string
+  position: number
+}
+
+export interface CommonRoutine {
+  id: number
+  creator_id: string
+  friend_id: string
+  name: string
+  emoji: string
+  created_at: string
+  tasks: CommonRoutineTask[]
+  creator_username: string | null
+  friend_username: string | null
+}
+
+// --------------------------------------------------------------------------- #
+// Duels
+// --------------------------------------------------------------------------- #
+export interface DuelTask {
+  id: number
+  title: string
+  scheduled_time: string
+  position: number
+  completed_by_me: boolean
+  completed_by_opponent: boolean
+}
+
+export interface DuelPlayer {
+  user_id: string
+  username: string | null
+  avatar_slug: string | null
+  avatar_url: string | null
+  elo_before: number
+  elo_after: number | null
+  elo_delta: number
+  coins_won: number
+  joined_at: string
+  finished_at: string | null
+  is_you: boolean
+}
+
+export interface Duel {
+  id: number
+  common_routine_id: number
+  common_routine_name: string
+  challenger_id: string
+  opponent_id: string
+  status: 'waiting' | 'active' | 'finished'
+  winner_id: string | null
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+  tasks: DuelTask[]
+  players: DuelPlayer[]
+  you_won: boolean
+}
+
+export interface LatePassOption {
+  task_id: number
+  title: string
+  scheduled_time: string
+  minutes_late: number
+  action: 'pay_option'
+  cost: number
+  detail: string
+}
+
+export interface AutoCheckedTask {
+  task_id: number
+  title: string
+  scheduled_time: string
+  minutes_late: number
+  action: 'auto_checked'
+  elo_delta: number
+  detail: string
+}
+
 export type ReportRange = '3d' | 'week' | 'month'
 
 export interface ReportSummary {

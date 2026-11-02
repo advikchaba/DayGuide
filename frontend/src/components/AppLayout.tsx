@@ -11,6 +11,7 @@ const LINKS = [
   { to: '/reports', label: 'Reports' },
   { to: '/shop', label: 'Shop' },
   { to: '/leaderboard', label: 'Ladder' },
+  { to: '/friends', label: 'Friends' },
   { to: '/profile', label: 'Profile' },
 ]
 
