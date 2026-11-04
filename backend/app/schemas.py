@@ -319,6 +319,10 @@ class FriendRequestOut(BaseModel):
     friend_id: str
     status: str
     created_at: datetime
+    username: str | None = None
+    avatar_slug: str | None = None
+    avatar_url: str | None = None
+    elo: int | None = None
 
 
 class FriendOut(BaseModel):

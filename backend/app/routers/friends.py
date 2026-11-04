@@ -62,14 +62,15 @@ def _get_profile_by_username(db: Session, username: str) -> Profile:
 
 
 def _are_friends(db: Session, user_id: str, friend_id: str) -> FriendModel | None:
+    """Accepted friendship in either direction (older rows may only exist one way)."""
     return (
         db.query(FriendModel)
         .filter(
-            FriendModel.user_id == user_id,
-            FriendModel.friend_id == friend_id,
+            ((FriendModel.user_id == user_id) & (FriendModel.friend_id == friend_id))
+            | ((FriendModel.user_id == friend_id) & (FriendModel.friend_id == user_id)),
             FriendModel.status == "accepted",
         )
-        .one_or_none()
+        .first()
     )
 
 
@@ -81,7 +82,7 @@ def _pending_request_between(db: Session, user_id: str, friend_id: str) -> Frien
             | ((FriendModel.user_id == friend_id) & (FriendModel.friend_id == user_id)),
             FriendModel.status == "pending",
         )
-        .one_or_none()
+        .first()
     )
 
 
@@ -176,10 +177,9 @@ def accept_friend_request(
     if request.status != "pending":
         raise HTTPException(status_code=409, detail="This request has already been resolved.")
 
+    # A single accepted row links both users: every friendship read is symmetric,
+    # so adding a mirror row here would make the pair show up twice.
     request.status = "accepted"
-    # Create reciprocal friend row for the accepter so both sides see each other.
-    reciprocal = FriendModel(user_id=profile.id, friend_id=request.user_id, status="accepted")
-    db.add(reciprocal)
     db.commit()
     return {"id": request.id, "status": request.status}
 
@@ -214,16 +214,7 @@ def pending_requests(
         .order_by(FriendModel.created_at.desc())
         .all()
     )
-    return [
-        {
-            "id": row.id,
-            "user_id": row.user_id,
-            "friend_id": row.friend_id,
-            "status": row.status,
-            "created_at": row.created_at,
-        }
-        for row in rows
-    ]
+    return [_serialize_friend(db, row, profile.id) for row in rows]
 
 
 @router.get("", response_model=list[FriendOut])
@@ -240,7 +231,16 @@ def list_friends(
         .order_by(FriendModel.created_at.desc())
         .all()
     )
-    return [_serialize_friend(db, row, profile.id) for row in rows]
+    # Rows written before the fix could exist twice per pair (one per direction).
+    seen: set[str] = set()
+    friends: list[dict] = []
+    for row in rows:
+        other_id = row.friend_id if row.user_id == profile.id else row.user_id
+        if other_id in seen:
+            continue
+        seen.add(other_id)
+        friends.append(_serialize_friend(db, row, profile.id))
+    return friends
 
 
 @router.delete("/friends/{friend_id}")

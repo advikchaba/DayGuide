@@ -220,6 +220,10 @@ export interface FriendRequest {
   friend_id: string
   status: string
   created_at: string
+  username?: string | null
+  avatar_slug?: string | null
+  avatar_url?: string | null
+  elo?: number | null
 }
 
 export interface Friend {

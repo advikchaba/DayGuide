@@ -50,6 +50,20 @@ export function DuelPage() {
     void load()
   }, [load])
 
+  // Friend state changes on the other person's device (they accept a request,
+  // send one, or remove you), so refresh whenever this tab comes back.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void load()
+    }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [load])
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return
     setSearching(true)
@@ -227,9 +241,11 @@ export function DuelPage() {
             {pendingRequests.map((req) => (
               <li key={req.id} className="glass-2 flex items-center justify-between gap-3 px-3 py-2.5">
                 <div className="flex items-center gap-3">
-                  <Avatar slug={null} size={32} />
+                  <Avatar slug={req.avatar_slug ?? null} size={32} src={req.avatar_url ?? undefined} />
                   <div>
-                    <p className="text-sm font-bold">User {req.user_id.slice(0, 8)}</p>
+                    <p className="text-sm font-bold">
+                      {req.username ? `@${req.username}` : `User ${req.user_id.slice(0, 8)}`}
+                    </p>
                     <p className="text-xs text-muted">wants to be your friend</p>
                   </div>
                 </div>
